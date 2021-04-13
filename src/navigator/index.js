@@ -46,11 +46,20 @@ export default () => {
 
     /**
      * Set new root for layers
-     * @param {HTMLElement|Component|String} el Component to be set as the root
+     * @param {HTMLElement|String} el Component to be set as the root
      * @return {self}
      */
     setRoot(el) {
       layers.setRoot(el);
+      return this;
+    },
+    /**
+     * Set new root for layers
+     * @param {Component} model Component to be set as the root
+     * @return {self}
+     */
+    setRootModel(model) {
+      layers.setRootModel(model);
       return this;
     },
 

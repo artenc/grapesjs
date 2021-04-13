@@ -383,6 +383,9 @@ export default Backbone.View.extend({
     el = isString(el) ? this.em.getWrapper().find(el)[0] : el;
     const model = getModel(el, $);
     if (!model) return;
+    this.setRootModel(model);
+  },
+  setRootModel(model) {
     this.stopListening();
     this.model = model;
     this.initialize(this.opt);
