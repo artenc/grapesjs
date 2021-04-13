@@ -36,6 +36,7 @@ const deps = [
   require('commands'),
   require('block_manager')
 ];
+const depsByName = {};
 
 const { Collection } = Backbone;
 let timedInterval;
@@ -93,7 +94,10 @@ export default Backbone.Model.extend({
       : '';
 
     // Load modules
-    deps.forEach(name => this.loadModule(name));
+    deps.forEach(dep => {
+      const mod = this.loadModule(dep);
+      depsByName[mod.name] = dep;
+    });
     this.on('change:componentHovered', this.componentHovered, this);
     this.on('change:changesCount', this.updateChanges, this);
     toLog.forEach(e => this.listenLog(e));
@@ -182,14 +186,26 @@ export default Backbone.Model.extend({
 
   /**
    * Load generic module
-   * @param {String} moduleName Module name
+   * @param {String} module Module
    * @return {this}
    * @private
    */
-  loadModule(moduleName) {
+  loadModule(module) {
+    const Mod = this.initModule(module);
+
+    // Bind the module to the editor model if public
+    !Mod.private && this.set(Mod.name, Mod);
+    Mod.onLoad && this.get('toLoad').push(Mod);
+    this.get('modules').push(Mod);
+
+    return Mod;
+  },
+
+  initModule(moduleOrName, opt = {}) {
     const { config } = this;
-    const Module = moduleName.default || moduleName;
-    const Mod = new Module();
+    const Module =
+      typeof moduleOrName == 'string' ? depsByName[moduleOrName] : moduleOrName;
+    const Mod = new (Module.default || Module)();
     const name = Mod.name.charAt(0).toLowerCase() + Mod.name.slice(1);
     const cfgParent = !isUndefined(config[name])
       ? config[name]
@@ -210,13 +226,12 @@ export default Backbone.Model.extend({
     }
 
     cfg.em = this;
-    Mod.init({ ...cfg });
+    Mod.init({
+      ...cfg,
+      ...opt.config
+    });
 
-    // Bind the module to the editor model if public
-    !Mod.private && this.set(Mod.name, Mod);
-    Mod.onLoad && this.get('toLoad').push(Mod);
-    this.get('modules').push(Mod);
-    return this;
+    return Mod;
   },
 
   /**
