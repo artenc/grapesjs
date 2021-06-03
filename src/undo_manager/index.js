@@ -48,9 +48,10 @@ export default () => {
      * @private
      */
     init(opts = {}) {
-      config = { ...opts, ...configDef };
+      config = { ...configDef, ...opts };
       em = config.em;
       this.em = em;
+      const fromUndo = true;
       um = new UndoManager({ track: true, register: [], ...config });
       um.changeUndoType('change', {
         condition: object => {
@@ -72,13 +73,17 @@ export default () => {
         on(object, v, opts) {
           !beforeCache && (beforeCache = object.previousAttributes());
           const opt = opts || v || {};
+          opt.noUndo &&
+            setTimeout(() => {
+              beforeCache = null;
+            });
           if (hasSkip(opt)) {
             return;
           } else {
             const result = {
               object,
               before: beforeCache,
-              after: object.toJSON({ fromUndo: 1 })
+              after: object.toJSON({ fromUndo })
             };
             beforeCache = null;
             return result;
@@ -92,7 +97,7 @@ export default () => {
             object: collection,
             before: undefined,
             after: model,
-            options: { ...options }
+            options: { ...options, fromUndo }
           };
         }
       });
@@ -103,7 +108,7 @@ export default () => {
             object: collection,
             before: model,
             after: undefined,
-            options: { ...options }
+            options: { ...options, fromUndo }
           };
         }
       });

@@ -29,7 +29,7 @@ const avoidInline = em => em && em.getConfig('avoidInlineStyle');
 export const eventDrag = 'component:drag';
 export const keySymbols = '__symbols';
 export const keySymbol = '__symbol';
-export const keySymbol2w = '__symbol2w';
+export const keySymbolOvrd = '__symbol_ovrd';
 export const keyUpdate = 'component:update';
 export const keyUpdateInside = `${keyUpdate}-inside`;
 
@@ -58,8 +58,8 @@ export const keyUpdateInside = `${keyUpdate}-inside`;
  *  You can also specify a query string to indentify elements,
  *  eg. `'.some-class[title=Hello], [data-gjs-type=column]'` means you can drag the component only inside elements
  *  containing `some-class` class and `Hello` title, and `column` components. Default: `true`
- * @property {Boolean|String} [droppable=true] Indicates if it's possible to drop other components inside. You can use
- * a query string as with `draggable`. Default: `true`
+ * @property {Boolean|String|Function} [droppable=true] Indicates if it's possible to drop other components inside. You can use
+ * a query string as with `draggable`. In the case of a function, target and destination components are passed as arguments, return a Boolean to indicate if the drop is possible. Default: `true`
  * @property {Boolean} [badgable=true] Set to false if you don't want to see the badge (with the name) over the component. Default: `true`
  * @property {Boolean|Array<String>} [stylable=true] True if it's possible to style the component.
  * You can also indicate an array of CSS properties which is possible to style, eg. `['color', 'width']`, all other properties
@@ -127,6 +127,7 @@ const Component = Backbone.Model.extend(Styleable).extend(
       toolbar: null,
       [keySymbol]: 0,
       [keySymbols]: 0,
+      [keySymbolOvrd]: 0,
       _undo: true,
       _undoexc: ['status', 'open']
     },
@@ -692,6 +693,19 @@ const Component = Backbone.Model.extend(Styleable).extend(
       );
     },
 
+    __isSymbolNested() {
+      if (!this.__isSymbolOrInst() || this.__isSymbolTop()) return false;
+      const symbTopSelf = (this.__isSymbol()
+        ? this
+        : this.__getSymbol()
+      ).__getSymbTop();
+      const symbTop = this.__getSymbTop();
+      const symbTopMain = symbTop.__isSymbol()
+        ? symbTop
+        : symbTop.__getSymbol();
+      return symbTopMain !== symbTopSelf;
+    },
+
     __getAllById() {
       const { em } = this;
       return em ? em.get('DomComponents').allById() : {};
@@ -724,22 +738,42 @@ const Component = Backbone.Model.extend(Styleable).extend(
       return symbs;
     },
 
-    __getSymbToUp(opts = {}) {
-      const { em } = this;
-      const symbEnabled = em && em.get('symbols');
-      const { fromInstance } = opts;
-      const symbols = this.__getSymbols() || [];
-      const symbol = this.__getSymbol();
-      let result =
-        symbol && !fromInstance
-          ? [symbol]
-          : symbols.filter(md => md.collection || md.prevColl);
+    __isSymbOvrd(prop = '') {
+      const ovrd = this.get(keySymbolOvrd);
+      const [prp] = prop.split(':');
+      const props = prop !== prp ? [prop, prp] : [prop];
+      return (
+        ovrd === true ||
+        (isArray(ovrd) && props.some(p => ovrd.indexOf(p) >= 0))
+      );
+    },
 
-      if (fromInstance) {
-        result = result.filter(i => i !== fromInstance);
+    __getSymbToUp(opts = {}) {
+      let result = [];
+      const { em } = this;
+      const { changed } = opts;
+      const symbEnabled = em && em.get('symbols');
+
+      if (
+        opts.fromInstance ||
+        opts.noPropagate ||
+        opts.fromUndo ||
+        !symbEnabled ||
+        // Avoid updating others if the current component has override
+        (changed && this.__isSymbOvrd(changed))
+      ) {
+        return result;
       }
 
-      return symbEnabled ? result : [];
+      const symbols = this.__getSymbols() || [];
+      const symbol = this.__getSymbol();
+      const all = symbol ? [symbol, ...(symbol.__getSymbols() || [])] : symbols;
+      result = all
+        .filter(s => s !== this)
+        // Avoid updating those with override
+        .filter(s => !(changed && s.__isSymbOvrd(changed)));
+
+      return result;
     },
 
     __getSymbTop(opts) {
@@ -761,20 +795,31 @@ const Component = Backbone.Model.extend(Styleable).extend(
       delete changed.open;
       delete changed[keySymbols];
       delete changed[keySymbol];
+      delete changed[keySymbolOvrd];
       delete changed.attributes;
       delete attrs.id;
       if (!isEmptyObj(attrs)) changed.attributes = attrs;
       if (!isEmptyObj(changed)) {
         const toUp = this.__getSymbToUp(opts);
+        // Avoid propagating overrides to other symbols
+        keys(changed).map(prop => {
+          if (this.__isSymbOvrd(prop)) delete changed[prop];
+        });
+
         this.__logSymbol('props', toUp, { opts, changed });
-        toUp.forEach(child =>
-          child.set(changed, { fromInstance: this, ...opts })
-        );
+        toUp.forEach(child => {
+          const propsChanged = { ...changed };
+          // Avoid updating those with override
+          keys(propsChanged).map(prop => {
+            if (child.__isSymbOvrd(prop)) delete propsChanged[prop];
+          });
+          child.set(propsChanged, { fromInstance: this, ...opts });
+        });
       }
     },
 
     __upSymbCls(m, c, opts = {}) {
-      const toUp = this.__getSymbToUp();
+      const toUp = this.__getSymbToUp(opts);
       this.__logSymbol('classes', toUp, { opts });
       toUp.forEach(child => {
         // This will propagate the change up to __upSymbProps
@@ -785,22 +830,29 @@ const Component = Backbone.Model.extend(Styleable).extend(
 
     __upSymbComps(m, c, o) {
       const optUp = o || c || {};
-      const { fromInstance } = optUp;
-      const toUpOpts = { fromInstance };
+      const { fromInstance, fromUndo } = optUp;
+      const toUpOpts = { fromInstance, fromUndo };
       const isTemp = m.opt.temporary;
 
+      // Reset
       if (!o) {
-        const toUp = this.__getSymbToUp(toUpOpts);
-        this.__logSymbol('reset', toUp);
+        const toUp = this.__getSymbToUp({
+          ...toUpOpts,
+          changed: 'components:reset'
+        });
+        this.__logSymbol('reset', toUp, { components: m.models });
         toUp.forEach(symb => {
           const newMods = m.models.map(mod => mod.clone({ symbol: 1 }));
           symb.components().reset(newMods, { fromInstance: this, ...c });
         });
-      } else if (o.add) {
         // Add
+      } else if (o.add) {
         let addedInstances = [];
         const isMainSymb = !!this.__getSymbols();
-        const toUp = this.__getSymbToUp(toUpOpts);
+        const toUp = this.__getSymbToUp({
+          ...toUpOpts,
+          changed: 'components:add'
+        });
         if (toUp.length) {
           const addSymb = m.__getSymbol();
           addedInstances =
@@ -826,31 +878,48 @@ const Component = Backbone.Model.extend(Styleable).extend(
             symbPrev || m.clone({ symbol: 1, symbolInv: isMainSymb });
           symb.append(toAppend, { fromInstance: this, ...o });
         });
+        // Remove
       } else {
-        // Allow removing single instances
+        // Remove instance reference from the symbol
+        const symb = m.__getSymbol();
+        symb &&
+          !o.temporary &&
+          symb.set(
+            keySymbols,
+            symb.__getSymbols().filter(i => i !== m)
+          );
+
+        // Propagate remove only if the component is an inner symbol
         if (!m.__isSymbolTop()) {
-          const toUp = m.__getSymbToUp(toUpOpts);
+          const changed = 'components:remove';
+          const { index } = o;
+          const parent = m.parent();
+          const opts = { fromInstance: m, ...o };
+          const isSymbNested = m.__isSymbolNested();
+          let toUpFn = symb => {
+            const symbPrnt = symb.parent();
+            symbPrnt && !symbPrnt.__isSymbOvrd(changed) && symb.remove(opts);
+          };
+          // Check if the parent allows the removing
+          let toUp = !parent.__isSymbOvrd(changed)
+            ? m.__getSymbToUp(toUpOpts)
+            : [];
+
+          if (isSymbNested) {
+            toUp = parent.__getSymbToUp({ ...toUpOpts, changed });
+            toUpFn = symb => {
+              const toRemove = symb.components().at(index);
+              toRemove && toRemove.remove({ fromInstance: parent, ...opts });
+            };
+          }
+
           !isTemp &&
-            this.__logSymbol('remove', toUp, { opts: o, removed: m.cid });
-          toUp.forEach(symb => {
-            const opts = { fromInstance: m, ...o };
-            // In case of nested symbols, I only need to propagate changes to its instances
-            if (symb.__isSymbolTop() && symb.__getSymbols()) {
-              const toUpInst = symb.__getSymbToUp({
-                fromInstance: m,
-                ...toUpOpts
-              });
-              this.__logSymbol('remove-inst', toUpInst, {
-                opts: o,
-                symbol: symb
-              });
-              toUpInst.forEach(inst => {
-                inst.remove(opts);
-              });
-            } else {
-              symb.remove(opts);
-            }
-          });
+            this.__logSymbol('remove', toUp, {
+              opts: o,
+              removed: m.cid,
+              isSymbNested
+            });
+          toUp.forEach(toUpFn);
         }
       }
 
@@ -1233,13 +1302,13 @@ const Component = Backbone.Model.extend(Styleable).extend(
 
       // Symbols
       // If I clone an inner symbol, I have to reset it
-      cloned.unset(keySymbols);
+      cloned.set(keySymbols, 0);
       const symbol = this.__getSymbol();
       const symbols = this.__getSymbols();
 
       if (!opt.symbol && (symbol || symbols)) {
-        cloned.unset(keySymbol);
-        cloned.unset(keySymbols);
+        cloned.set(keySymbol, 0);
+        cloned.set(keySymbols, 0);
       } else if (symbol) {
         // Contains already a reference to a symbol
         symbol.set(keySymbols, [...symbol.__getSymbols(), cloned]);
@@ -1262,7 +1331,6 @@ const Component = Backbone.Model.extend(Styleable).extend(
           [this, cloned].map(i => i.__initSymb());
           this.set(keySymbol, cloned);
         }
-        // opt.symbol2w && cloned.set(keySymbol2w, 1);
       }
 
       const event = 'component:clone';
@@ -1407,11 +1475,13 @@ const Component = Backbone.Model.extend(Styleable).extend(
       delete obj.open; // used in Layers
 
       if (!opts.fromUndo) {
-        if (obj[keySymbols]) {
-          obj[keySymbols] = this.__getSymbToUp().map(i => i.getId());
+        const symbol = obj[keySymbol];
+        const symbols = obj[keySymbols];
+        if (symbols && isArray(symbols)) {
+          obj[keySymbols] = symbols.map(i => (i.getId ? i.getId() : i));
         }
-        if (obj[keySymbol] && !isString(obj[keySymbol])) {
-          obj[keySymbol] = obj[keySymbol].getId();
+        if (symbol && !isString(symbol)) {
+          obj[keySymbol] = symbol.getId();
         }
       }
 
