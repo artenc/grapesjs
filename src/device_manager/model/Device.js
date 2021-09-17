@@ -15,6 +15,8 @@ export default class Device extends Model {
       width: null,
       height: '',
       widthMedia: null,
+      mediaCondition: null,
+      defaultMediaCondition: null,
       priority: null
     };
   }
@@ -23,8 +25,14 @@ export default class Device extends Model {
     this.get('widthMedia') === null &&
       this.set('widthMedia', this.get('width'));
     this.get('width') === null && this.set('width', this.get('widthMedia'));
+
+    if (this.get('widthMedia') && !this.get('mediaCondition')) {
+      this.set('mediaCondition', this.get('defaultMediaCondition'));
+    }
+
     !this.get('priority') &&
       this.set('priority', parseFloat(this.get('widthMedia')) || 0);
+
     const toCheck = ['width', 'height', 'widthMedia'];
     toCheck.forEach(prop => this.checkUnit(prop));
   }

@@ -79,6 +79,12 @@ export default () => {
       c = { ...defaults, ...config };
       const { em } = c;
 
+      // --- I need to pass the default mediaCondition config parameter to device
+      c.devices.forEach(
+        dv => (dv.defaultMediaCondition = c.em.config.mediaCondition)
+      );
+      // ---
+
       devices = new Devices();
       c.devices.forEach(dv => this.add(dv));
       this.em = em;
