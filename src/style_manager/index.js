@@ -75,11 +75,6 @@ export default () => {
       if (ppfx) c.stylePrefix = ppfx + c.stylePrefix;
       properties = new Properties();
       sectors = new Sectors([], c);
-      SectView = new SectorsView({
-        collection: sectors,
-        target: c.em,
-        config: c
-      });
 
       return this;
     },
@@ -276,8 +271,7 @@ export default () => {
         const sm = em.get('SelectorManager');
         const smConf = sm ? sm.getConfig() : {};
         const state = !config.devicePreviewMode ? em.get('state') : '';
-        const valid = classes.getStyleable();
-        const hasNonFixedClasses = classes.hasNonFixed();
+        const valid = classes.getStyleable({ noFixed: true });
         const hasClasses = valid.length;
         const useClasses = !smConf.componentFirst || options.useClasses;
         const addOpts = { noCount: 1 };
@@ -290,7 +284,7 @@ export default () => {
         // #268
         um.stop();
 
-        if (hasClasses && useClasses && hasNonFixedClasses) {
+        if (hasClasses && useClasses) {
           const deviceW = em.getCurrentMedia();
           rule = cssC.get(valid, state, deviceW);
 
@@ -308,6 +302,24 @@ export default () => {
       }
 
       return model;
+    },
+
+    getParentRules(target, state) {
+      const { em } = c;
+      let result = [];
+
+      if (em) {
+        const cssC = em.get('CssComposer');
+        const cssGen = em.get('CodeManager').getGenerator('css');
+        const all = cssC
+          .getRules(target.getSelectors().getFullString())
+          .filter(rule => (state ? rule.get('state') === state : 1))
+          .sort(cssGen.sortRules)
+          .reverse();
+        result = all.slice(all.indexOf(target) + 1);
+      }
+
+      return result;
     },
 
     /**
@@ -410,6 +422,12 @@ export default () => {
      * @private
      * */
     render() {
+      SectView && SectView.remove();
+      SectView = new SectorsView({
+        collection: sectors,
+        target: c.em,
+        config: c
+      });
       return SectView.render().el;
     },
 
@@ -423,7 +441,7 @@ export default () => {
         coll.reset();
         coll.stopListening();
       });
-      SectView.remove();
+      SectView && SectView.remove();
       [c, properties, sectors, SectView].forEach(i => (i = {}));
       this.em = {};
     }

@@ -7,17 +7,22 @@ export default Backbone.Collection.extend({
 
   modelId: attr => `${attr.name}_${attr.type || Selector.TYPE_CLASS}`,
 
-  getStyleable() {
-    return filter(
+  getStyleable({ noFixed } = {}) {
+    const selectors = filter(
       this.models,
       item => item.get('active') && !item.get('private')
     );
+
+    return !noFixed || this.hasNonFixed(selectors) ? selectors : [];
   },
 
-  getValid({ noDisabled } = {}) {
-    return filter(this.models, item => !item.get('private')).filter(item =>
-      noDisabled ? item.get('active') : 1
-    );
+  getValid({ noDisabled, noFixed } = {}) {
+    const selectors = filter(
+      this.models,
+      item => !item.get('private')
+    ).filter(item => (noDisabled ? item.get('active') : 1));
+
+    return !noFixed || this.hasNonFixed(selectors) ? selectors : [];
   },
 
   getFullString(collection, opts = {}) {
@@ -27,7 +32,7 @@ export default Backbone.Collection.extend({
     return result.join('').trim();
   },
 
-  hasNonFixed() {
-    return some(this.models, item => !item.get('fixed'));
+  hasNonFixed(collection = null) {
+    return some(collection || this.models, item => !item.get('fixed'));
   }
 });
