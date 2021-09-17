@@ -81,10 +81,16 @@ export default Backbone.View.extend({
 
   syncStyle() {
     const { em } = this;
+
+    const opts = { noDisabled: 1, noFixed: 1 };
+    const selectors = this.getCommonSelectors({ opts });
+
+    if (!selectors.length) {
+      return;
+    }
+
     const target = this.getTarget();
     const cssC = em.get('CssComposer');
-    const opts = { noDisabled: 1 };
-    const selectors = this.getCommonSelectors({ opts });
     const state = em.get('state');
     const mediaText = em.getCurrentMedia();
     const ruleComponents = [];

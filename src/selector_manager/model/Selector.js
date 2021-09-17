@@ -27,6 +27,9 @@ const Selector = Model.extend(
       // If true, can't be removed from the attacched element
       protected: false,
 
+      // If true, selector styles cannot be changed, instead styles will be applied by element ID
+      fixed: false,
+
       // If true, selector is applied only inside editor
       // Will not be present in export code
       editonly: false
