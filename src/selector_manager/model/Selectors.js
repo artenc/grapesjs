@@ -1,4 +1,4 @@
-import { filter } from 'underscore';
+import { filter, some } from 'underscore';
 import Backbone from 'backbone';
 import Selector from './Selector';
 
@@ -25,5 +25,9 @@ export default Backbone.Collection.extend({
     const coll = collection || this;
     coll.forEach(selector => result.push(selector.getFullName(opts)));
     return result.join('').trim();
+  },
+
+  hasNonFixed() {
+    return some(this.models, item => !item.get('fixed'));
   }
 });
