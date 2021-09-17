@@ -18,60 +18,63 @@ Once the editor is instantiated you can use its API. Before using these methods 
 const canvas = editor.Canvas;
 ```
 
--   [getConfig][2]
--   [getElement][3]
--   [getFrameEl][4]
--   [getWindow][5]
--   [getDocument][6]
--   [getBody][7]
--   [getWrapperEl][8]
--   [setCustomBadgeLabel][9]
--   [hasFocus][10]
--   [scrollTo][11]
--   [setZoom][12]
--   [getZoom][13]
+*   [getConfig][2]
+*   [getElement][3]
+*   [getFrameEl][4]
+*   [getWindow][5]
+*   [getDocument][6]
+*   [getBody][7]
+*   [setCustomBadgeLabel][8]
+*   [hasFocus][9]
+*   [scrollTo][10]
+*   [setZoom][11]
+*   [getZoom][12]
+*   [getCoords][13]
+*   [setCoords][14]
+
+[Component]: component.html
 
 ## getConfig
 
 Get the configuration object
 
-Returns **[Object][14]** 
+### Examples
+
+```javascript
+console.log(canvas.getConfig())
+```
+
+Returns **[Object][15]** Configuration object
 
 ## getElement
 
 Get the canvas element
 
-Returns **[HTMLElement][15]** 
+Returns **[HTMLElement][16]** 
 
 ## getFrameEl
 
-Get the iframe element of the canvas
+Get the main frame element of the canvas
 
-Returns **[HTMLIFrameElement][16]** 
+Returns **[HTMLIFrameElement][17]** 
 
 ## getWindow
 
-Get the window instance of the iframe element
+Get the main frame window instance
 
-Returns **[Window][17]** 
+Returns **[Window][18]** 
 
 ## getDocument
 
-Get the document of the iframe element
+Get the main frame document element
 
 Returns **HTMLDocument** 
 
 ## getBody
 
-Get the body of the iframe element
+Get the main frame body element
 
-Returns **[HTMLBodyElement][18]** 
-
-## getWrapperEl
-
-Get the wrapper element containing all the components
-
-Returns **[HTMLElement][15]** 
+Returns **[HTMLBodyElement][19]** 
 
 ## setCustomBadgeLabel
 
@@ -79,7 +82,7 @@ Set custom badge naming strategy
 
 ### Parameters
 
--   `f` **[Function][19]** 
+*   `f` **[Function][20]** 
 
 ### Examples
 
@@ -93,13 +96,13 @@ canvas.setCustomBadgeLabel(function(component){
 
 Get canvas rectangular data
 
-Returns **[Object][14]** 
+Returns **[Object][15]** 
 
 ## hasFocus
 
 Check if the canvas is focused
 
-Returns **[Boolean][20]** 
+Returns **[Boolean][21]** 
 
 ## scrollTo
 
@@ -110,9 +113,10 @@ passed to it. For instance, you can scroll smoothly by using
 
 ### Parameters
 
--   `el` **([HTMLElement][15] | Component)** 
--   `opts` **[Object][14]** Options, same as options for `scrollIntoView` (optional, default `{}`)
-    -   `opts.force` **[Boolean][20]** Force the scroll, even if the element is already visible (optional, default `false`)
+*   `el` **([HTMLElement][16] | [Component])** 
+*   `opts` **[Object][15]** Options, same as options for `scrollIntoView` (optional, default `{}`)
+
+    *   `opts.force` **[Boolean][21]** Force the scroll, even if the element is already visible (optional, default `false`)
 
 ### Examples
 
@@ -126,19 +130,63 @@ canvas.scrollTo(selected, { force: true });
 
 ## setZoom
 
-Set zoom value
+Set canvas zoom value
 
 ### Parameters
 
--   `value` **[Number][21]** The zoom value, from 0 to 100
+*   `value` **[Number][22]** The zoom value, from 0 to 100
+
+### Examples
+
+```javascript
+canvas.setZoom(50); // set zoom to 50%
+```
 
 Returns **this** 
 
 ## getZoom
 
-Get zoom value
+Get canvas zoom value
 
-Returns **[Number][21]** 
+### Examples
+
+```javascript
+canvas.setZoom(50); // set zoom to 50%
+const zoom = canvas.getZoom(); // 50
+```
+
+Returns **[Number][22]** 
+
+## setCoords
+
+Set canvas position coordinates
+
+### Parameters
+
+*   `x` **[Number][22]** Horizontal position
+*   `y` **[Number][22]** Vertical position
+
+### Examples
+
+```javascript
+canvas.setCoords(100, 100);
+```
+
+Returns **this** 
+
+## getCoords
+
+Get canvas position coordinates
+
+### Examples
+
+```javascript
+canvas.setCoords(100, 100);
+const coords = canvas.getCoords();
+// { x: 100, y: 100 }
+```
+
+Returns **[Object][15]** Object containing coordinates
 
 ## addFrame
 
@@ -146,27 +194,27 @@ Add new frame to the canvas
 
 ### Parameters
 
--   `props` **[Object][14]** Frame properties (optional, default `{}`)
--   `opts`   (optional, default `{}`)
+*   `props` **[Object][15]** Frame properties (optional, default `{}`)
+*   `opts`   (optional, default `{}`)
 
 ### Examples
 
 ```javascript
-editor.Canvas.addFrame({
-name: 'Mobile home page',
-x: 100, // Position in canvas
-y: 100,
-width: 500, // Frame dimensions
-height: 600,
-// device: 'DEVICE-ID',
-components: [
-'<h1 class="testh">Title frame</h1>',
-'<p class="testp">Paragraph frame</p>',
-],
-styles: `
-.testh { color: red; }
-.testp { color: blue; }
-`,
+canvas.addFrame({
+  name: 'Mobile home page',
+  x: 100, // Position in canvas
+  y: 100,
+  width: 500, // Frame dimensions
+  height: 600,
+  // device: 'DEVICE-ID',
+  components: [
+    '<h1 class="testh">Title frame</h1>',
+    '<p class="testp">Paragraph frame</p>',
+  ],
+  styles: `
+    .testh { color: red; }
+    .testp { color: blue; }
+  `,
 });
 ```
 
@@ -186,30 +234,32 @@ Returns **Frame**
 
 [7]: #getbody
 
-[8]: #getwrapperel
+[8]: #setcustombadgelabel
 
-[9]: #setcustombadgelabel
+[9]: #hasfocus
 
-[10]: #hasfocus
+[10]: #scrollto
 
-[11]: #scrollto
+[11]: #setzoom
 
-[12]: #setzoom
+[12]: #getzoom
 
-[13]: #getzoom
+[13]: #getcoords
 
-[14]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+[14]: #setcoords
 
-[15]: https://developer.mozilla.org/docs/Web/HTML/Element
+[15]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
 
-[16]: https://developer.mozilla.org/docs/Web/API/HTMLIFrameElement
+[16]: https://developer.mozilla.org/docs/Web/HTML/Element
 
-[17]: https://developer.mozilla.org/docs/Web/API/Window
+[17]: https://developer.mozilla.org/docs/Web/API/HTMLIFrameElement
 
-[18]: https://developer.mozilla.org/docs/Web/HTML/Element/body
+[18]: https://developer.mozilla.org/docs/Web/API/Window
 
-[19]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function
+[19]: https://developer.mozilla.org/docs/Web/HTML/Element/body
 
-[20]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
+[20]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function
 
-[21]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+[21]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
+
+[22]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number

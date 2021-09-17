@@ -88,9 +88,6 @@
  * ### Modal
  * * `modal:open` - Modal is opened
  * * `modal:close` - Modal is closed
- * ### Parser
- * * `parse:html` - On HTML parse, an object containing the input and the output of the parser is passed as an argument
- * * `parse:css` - On CSS parse, an object containing the input and the output of the parser is passed as an argument
  * ### Commands
  * * `run:{commandName}` - Triggered when some command is called to run (eg. editor.runCommand('preview'))
  * * `stop:{commandName}` - Triggered when some command is called to stop (eg. editor.stopCommand('preview'))
@@ -99,6 +96,12 @@
  * * `abort:{commandName}` - Triggered when the command execution is aborted (`editor.on(`run:preview:before`, opts => opts.abort = 1);`)
  * * `run` - Triggered on run of any command. The id and the result are passed as arguments to the callback
  * * `stop` - Triggered on stop of any command. The id and the result are passed as arguments to the callback
+ * ### Devices
+ * Check the [Devices](/api/device_manager.html) module.
+ * ### Parser
+ * Check the [Parser](/api/parser.html) module.
+ * ### Pages
+ * Check the [Pages](/api/pages.html) module.
  * ### General
  * * `canvasScroll` - Canvas is scrolled
  * * `update` - The structure of the template is updated (its HTML/CSS)
@@ -112,6 +115,7 @@ import $ from 'cash-dom';
 import defaults from './config/config';
 import EditorModel from './model/Editor';
 import EditorView from './view/EditorView';
+import html from 'utils/html';
 
 export default (config = {}) => {
   const c = {
@@ -120,11 +124,8 @@ export default (config = {}) => {
   };
 
   c.pStylePrefix = c.stylePrefix;
-  var em = new EditorModel(c);
-  var editorView = new EditorView({
-    model: em,
-    config: c
-  });
+  let em = new EditorModel(c);
+  let editorView;
 
   return {
     $,
@@ -156,6 +157,7 @@ export default (config = {}) => {
         'CodeManager',
         'UndoManager',
         'RichTextEditor',
+        ['Pages', 'PageManager'],
         'DomComponents',
         ['Components', 'DomComponents'],
         'LayerManager',
@@ -186,7 +188,7 @@ export default (config = {}) => {
 
       // Do post render stuff after the iframe is loaded otherwise it'll
       // be empty during tests
-      em.on('loaded', () => {
+      em.once('change:ready', () => {
         this.UndoManager.clear();
         em.get('modules').forEach(module => {
           module.postRender && module.postRender(editorView);
@@ -209,6 +211,7 @@ export default (config = {}) => {
     /**
      * Returns HTML built inside canvas
      * @param {Object} [opts={}] Options
+     * @param {Component} [opts.component] Return the HTML of a specific Component
      * @param {Boolean} [opts.cleanId=false] Remove unnecessary IDs (eg. those created automatically)
      * @returns {string} HTML string
      */
@@ -219,8 +222,10 @@ export default (config = {}) => {
     /**
      * Returns CSS built inside canvas
      * @param {Object} [opts={}] Options
+     * @param {Component} [opts.component] Return the CSS of a specific Component
+     * @param {Boolean} [opts.json=false] Return an array of CssRules instead of the CSS string
      * @param {Boolean} [opts.avoidProtected=false] Don't include protected CSS
-     * @returns {string} CSS string
+     * @returns {String|Array<CssRule>} CSS string or array of CssRules
      */
     getCss(opts) {
       return em.getCss(opts);
@@ -228,10 +233,12 @@ export default (config = {}) => {
 
     /**
      * Returns JS of all components
-     * @returns {string} JS string
+     * @param {Object} [opts={}] Options
+     * @param {Component} [opts.component] Get the JS of a specific component
+     * @returns {String} JS string
      */
-    getJs() {
-      return em.getJs();
+    getJs(opts) {
+      return em.getJs(opts);
     },
 
     /**
@@ -301,19 +308,29 @@ export default (config = {}) => {
     /**
      * Set style inside editor's canvas. This method overrides actual style
      * @param {Array<Object>|Object|string} style CSS string or style model
-     * @param {Object} opt the options object to be used by the [setStyle]{@link em#setStyle} method
      * @return {this}
      * @example
      * editor.setStyle('.cls{color: red}');
      * //or
      * editor.setStyle({
-     *   selectors: ['cls']
+     *   selectors: ['cls'],
      *   style: { color: 'red' }
      * });
      */
     setStyle(style, opt = {}) {
       em.setStyle(style, opt);
       return this;
+    },
+
+    /**
+     * Add styles to the editor
+     * @param {Array<Object>|Object|string} style CSS string or style model
+     * @returns {Array<CssRule>} Array of created CssRule instances
+     * @example
+     * editor.addStyle('.cls{color: red}');
+     */
+    addStyle(style, opts = {}) {
+      return em.addStyle(style, opts);
     },
 
     /**
@@ -402,6 +419,19 @@ export default (config = {}) => {
     },
 
     /**
+     * Returns, if active, the Component enabled in rich text editing mode.
+     * @returns {Component|null}
+     * @example
+     * const textComp = editor.getEditing();
+     * if (textComp) {
+     *  console.log('HTML: ', textComp.toHTML());
+     * }
+     */
+    getEditing() {
+      return em.getEditing();
+    },
+
+    /**
      * Set device to the editor. If the device exists it will
      * change the canvas to the proper width
      * @param {string} name Name of the device
@@ -460,12 +490,34 @@ export default (config = {}) => {
     },
 
     /**
+     * Get the JSON data object, which could be stored and loaded back with `editor.loadData(json)`
+     * @returns {Object}
+     * @example
+     * console.log(editor.storeData());
+     * // { pages: [...], styles: [...], ... }
+     */
+    storeData() {
+      return em.storeData();
+    },
+
+    /**
      * Load data from the current storage
      * @param {Function} clb Callback function
      * @return {Object} Stored data
      */
     load(clb) {
       return em.load(clb);
+    },
+
+    /**
+     * Load data from the JSON data object
+     * @param {Object} data Data to load
+     * @return {Object} Loaded object
+     * @example
+     * editor.loadData({ pages: [...], styles: [...], ... })
+     */
+    loadData(data) {
+      return em.loadData(data);
     },
 
     /**
@@ -661,7 +713,7 @@ export default (config = {}) => {
      * @private
      */
     getEl() {
-      return editorView.el;
+      return editorView && editorView.el;
     },
 
     /**
@@ -678,8 +730,25 @@ export default (config = {}) => {
      * @return {HTMLElement}
      */
     render() {
-      editorView.render();
-      return editorView.el;
-    }
+      editorView && editorView.remove();
+      editorView = new EditorView({
+        model: em,
+        config: c
+      });
+      return editorView.render().el;
+    },
+
+    /**
+     * Print safe HTML by using ES6 tagged template strings.
+     * @param {Array<String>} literals
+     * @param  {Array<String>} substs
+     * @returns {String}
+     * @example
+     * const unsafeStr = '<script>....</script>';
+     * const safeStr = '<b>Hello</b>';
+     * // Use `$${var}` to avoid escaping
+     * const strHtml = editor.html`Escaped ${unsafeStr}, unescaped $${safeStr}`;
+     */
+    html
   };
 };

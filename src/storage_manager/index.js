@@ -37,6 +37,7 @@ import LocalStorage from './model/LocalStorage';
 import RemoteStorage from './model/RemoteStorage';
 
 const eventStart = 'storage:start';
+const eventAfter = 'storage:after';
 const eventEnd = 'storage:end';
 const eventError = 'storage:error';
 
@@ -214,6 +215,7 @@ export default () => {
         ? st.store(
             toStore,
             res => {
+              this.onAfter('store', res);
               clb && clb(res);
               this.onEnd('store', res);
             },
@@ -237,9 +239,9 @@ export default () => {
      * });
      * */
     load(keys, clb) {
-      var st = this.get(this.getCurrent());
-      var keysF = [];
-      var result = {};
+      const st = this.get(this.getCurrent());
+      const keysF = [];
+      let result = {};
 
       if (typeof keys === 'string') keys = [keys];
       this.onStart('load', keys);
@@ -252,13 +254,8 @@ export default () => {
         st.load(
           keysF,
           res => {
-            // Restore keys name
-            var reg = new RegExp('^' + c.id + '');
-            for (var itemKey in res) {
-              var itemKeyR = itemKey.replace(reg, '');
-              result[itemKeyR] = res[itemKey];
-            }
-
+            result = this.__clearKeys(res);
+            this.onAfter('load', result);
             clb && clb(result);
             this.onEnd('load', result);
           },
@@ -270,6 +267,24 @@ export default () => {
       } else {
         clb && clb(result);
       }
+    },
+
+    /**
+     * Restore key names
+     * @param {Object} data
+     * @returns {Object}
+     * @private
+     */
+    __clearKeys(data = {}) {
+      const result = {};
+      const reg = new RegExp('^' + c.id + '');
+
+      for (let itemKey in data) {
+        const itemKeyR = itemKey.replace(reg, '');
+        result[itemKeyR] = data[itemKey];
+      }
+
+      return result;
     },
 
     /**
@@ -298,6 +313,17 @@ export default () => {
       if (em) {
         em.trigger(eventStart);
         ctx && em.trigger(`${eventStart}:${ctx}`, data);
+      }
+    },
+
+    /**
+     * On after callback (before passing data to the callback)
+     * @private
+     */
+    onAfter(ctx, data) {
+      if (em) {
+        em.trigger(eventAfter);
+        ctx && em.trigger(`${eventAfter}:${ctx}`, data);
       }
     },
 

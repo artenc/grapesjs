@@ -1,5 +1,4 @@
 import Editor from 'editor/index';
-import Keymaps from 'keymaps';
 
 describe('Keymaps', () => {
   describe('Main', () => {
@@ -8,8 +7,9 @@ describe('Keymaps', () => {
     let editor;
 
     beforeEach(() => {
-      editor = Editor().init();
+      editor = Editor({ keymaps: { defaults: [] } }).init();
       em = editor.getModel();
+      em.loadOnStart();
       obj = editor.Keymaps;
     });
 

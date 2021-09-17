@@ -1,7 +1,6 @@
-import Backbone from 'backbone';
-const $ = Backbone.$;
+import { Model } from 'backbone';
 
-export default Backbone.View.extend({
+export default Model.extend({
   /**
    * Initialize method that can't be removed
    * @param  {Object}  o Options
@@ -18,17 +17,6 @@ export default Backbone.View.extend({
     this.freezClass = this.ppfx + 'freezed';
 
     this.canvas = this.em.get && this.em.get('Canvas');
-
-    if (this.em.get) this.setElement(this.getCanvas());
-
-    if (this.canvas) {
-      this.$canvas = this.$el;
-      // this.$wrapper = $(this.getCanvasWrapper());
-      // this.frameEl = this.canvas.getFrameEl();
-      this.canvasTool = this.getCanvasTools();
-      // this.bodyEl = this.getCanvasBody();
-    }
-
     this.init(this.config);
   },
 
@@ -53,14 +41,6 @@ export default Backbone.View.extend({
    */
   getCanvasBody() {
     return this.canvas.getBody();
-  },
-
-  /**
-   * Get canvas wrapper element
-   * @return {HTMLElement}
-   */
-  getCanvasWrapper() {
-    return this.canvas.getWrapperEl();
   },
 
   /**
