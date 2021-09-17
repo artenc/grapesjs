@@ -277,6 +277,7 @@ export default () => {
         const smConf = sm ? sm.getConfig() : {};
         const state = !config.devicePreviewMode ? em.get('state') : '';
         const valid = classes.getStyleable();
+        const hasNonFixedClasses = classes.hasNonFixed();
         const hasClasses = valid.length;
         const useClasses = !smConf.componentFirst || options.useClasses;
         const addOpts = { noCount: 1 };
@@ -289,7 +290,7 @@ export default () => {
         // #268
         um.stop();
 
-        if (hasClasses && useClasses) {
+        if (hasClasses && useClasses && hasNonFixedClasses) {
           const deviceW = em.getCurrentMedia();
           rule = cssC.get(valid, state, deviceW);
 
