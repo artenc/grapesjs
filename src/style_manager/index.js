@@ -276,8 +276,7 @@ export default () => {
         const sm = em.get('SelectorManager');
         const smConf = sm ? sm.getConfig() : {};
         const state = !config.devicePreviewMode ? em.get('state') : '';
-        const valid = classes.getStyleable();
-        const hasNonFixedClasses = classes.hasNonFixed();
+        const valid = classes.getStyleable({ noFixed: true });
         const hasClasses = valid.length;
         const useClasses = !smConf.componentFirst || options.useClasses;
         const addOpts = { noCount: 1 };
@@ -290,7 +289,7 @@ export default () => {
         // #268
         um.stop();
 
-        if (hasClasses && useClasses && hasNonFixedClasses) {
+        if (hasClasses && useClasses) {
           const deviceW = em.getCurrentMedia();
           rule = cssC.get(valid, state, deviceW);
 
