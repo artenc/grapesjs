@@ -608,14 +608,21 @@ export default Backbone.Model.extend({
    * @return {Object} Stored data
    * @private
    */
-  store(clb) {
+  store(clb, opts = {}) {
+    opts = {
+      preventResetChanges: false,
+      ...opts
+    };
+
     const sm = this.get('StorageManager');
     if (!sm) return;
 
     const store = this.storeData();
     sm.store(store, res => {
       clb && clb(res, store);
-      this.set('changesCount', 0);
+      if (!opts.preventResetChanges) {
+        this.set('changesCount', 0);
+      }
       this.trigger('storage:store', store);
     });
 
