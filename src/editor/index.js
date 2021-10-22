@@ -485,8 +485,8 @@ export default (config = {}) => {
      * @param {Function} clb Callback function
      * @return {Object} Stored data
      */
-    store(clb) {
-      return em.store(clb);
+    store(clb, options = {}) {
+      return em.store(clb, options);
     },
 
     /**
