@@ -1,24 +1,36 @@
-import { isString } from 'underscore';
+import { isString, isElement } from 'underscore';
 import { createId } from 'utils/mixins';
 
 export default {
   getConfig(name) {
+    return this.__getConfig(name);
+  },
+
+  __getConfig(name) {
     const res = this.config || {};
     return name ? res[name] : res;
   },
 
-  getAll() {
-    return this.all || [];
+  getAll(opts = {}) {
+    return this.all ? (opts.array ? [...this.all.models] : this.all) : [];
   },
 
   getAllMap() {
     return this.getAll().reduce((acc, i) => {
-      acc[i.get('id')] = i;
+      acc[i.get(i.idAttribute)] = i;
       return acc;
     }, {});
   },
 
-  __initListen() {
+  __initConfig(def = {}, conf = {}) {
+    this.config = {
+      ...def,
+      ...conf
+    };
+    this.em = this.config.em;
+  },
+
+  __initListen(opts = {}) {
     const { all, em, events } = this;
     all &&
       em &&
@@ -29,6 +41,16 @@ export default {
           em.trigger(events.update, p, p.changedAttributes(), c)
         )
         .on('all', this.__catchAllEvent, this);
+    // Register collections
+    this.cls = [all].concat(opts.collections || []);
+    // Propagate events
+    (opts.propagate || []).forEach(({ entity, event }) => {
+      entity.on('all', (ev, model, coll, opts) => {
+        const options = opts || coll;
+        const opt = { event: ev, ...options };
+        [em, all].map(md => md.trigger(event, model, opt));
+      });
+    });
   },
 
   __remove(model, opts = {}) {
@@ -46,6 +68,23 @@ export default {
     const { em, events } = this;
     const options = opts || coll;
     em && events.all && em.trigger(events.all, { event, model, options });
+    this.__onAllEvent();
+  },
+
+  __appendTo() {
+    const elTo = this.getConfig().appendTo;
+
+    if (elTo) {
+      const el = isElement(elTo) ? elTo : document.querySelector(elTo);
+      if (!el) return this.__logWarn('"appendTo" element not found');
+      el.appendChild(this.render());
+    }
+  },
+
+  __onAllEvent() {},
+
+  __logWarn(str) {
+    this.em.logWarning(`[${this.name}]: ${str}`);
   },
 
   _createId(len = 16) {
@@ -59,5 +98,13 @@ export default {
     } while (allMap[id]);
 
     return id;
+  },
+
+  __destroy() {
+    this.cls.forEach(coll => {
+      coll.stopListening();
+      coll.reset();
+    });
+    this.em = 0;
   }
 };

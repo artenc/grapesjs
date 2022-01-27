@@ -1,6 +1,6 @@
-import $ from 'cash-dom';
-import Editor from './editor';
 import { isElement, isFunction } from 'underscore';
+import $ from 'utils/cash-dom';
+import Editor from './editor';
 import polyfills from 'utils/polyfills';
 import PluginManager from './plugin_manager';
 
@@ -27,7 +27,7 @@ export default {
   plugins,
 
   // Will be replaced on build
-  version: '<# VERSION #>',
+  version: __GJS_VERSION__,
 
   /**
    * Initialize the editor with passed options
@@ -52,7 +52,7 @@ export default {
     config = { ...defaultConfig, ...config, grapesjs: this };
     config.el =
       !headless && (isElement(els) ? els : document.querySelector(els));
-    const editor = new Editor(config).init();
+    const editor = new Editor(config, { $ }).init();
     const em = editor.getModel();
 
     // Load plugins
