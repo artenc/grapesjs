@@ -15,7 +15,7 @@ export default Backbone.Model.extend({
     default: '',
     placeholder: '',
     changeProp: 0,
-    options: []
+    options: [],
   },
 
   initialize() {
@@ -27,9 +27,7 @@ export default Backbone.Model.extend({
     if (target) {
       this.target = target;
       this.unset('target');
-      const targetEvent = changeProp
-        ? `change:${name}`
-        : `change:attributes:${name}`;
+      const targetEvent = changeProp ? `change:${name}` : `change:attributes:${name}`;
       this.listenTo(target, targetEvent, this.targetUpdated);
     }
   },
@@ -45,6 +43,10 @@ export default Backbone.Model.extend({
   targetUpdated() {
     const value = this.getTargetValue();
     this.set({ value }, { fromTarget: 1 });
+  },
+
+  getValue() {
+    return this.getTargetValue();
   },
 
   getTargetValue() {
@@ -108,5 +110,5 @@ export default Backbone.Model.extend({
     }
 
     return value || this.get('value') || this.get('default');
-  }
+  },
 });

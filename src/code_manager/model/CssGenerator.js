@@ -1,7 +1,13 @@
 import Backbone from 'backbone';
 import { bindAll, isUndefined, each } from 'underscore';
+import { hasWin } from 'utils/mixins';
 
 const maxValue = Number.MAX_VALUE;
+
+export const getMediaLength = mediaQuery => {
+  const length = /(-?\d*\.?\d+)\w{0,}/.exec(mediaQuery);
+  return !length ? '' : length[0];
+};
 
 export default Backbone.Model.extend({
   initialize() {
@@ -49,15 +55,16 @@ export default Backbone.Model.extend({
     this.model = model;
     const codeJson = [];
     let code = model ? this.buildFromModel(model, opts) : '';
-    const clearStyles =
-      isUndefined(opts.clearStyles) && em
-        ? em.getConfig('clearStyles')
-        : opts.clearStyles;
+    const clearStyles = isUndefined(opts.clearStyles) && em ? em.getConfig('clearStyles') : opts.clearStyles;
 
     if (cssc) {
-      const rules = opts.rules || cssc.getAll();
+      let rules = opts.rules || cssc.getAll();
       const atRules = {};
       const dump = [];
+
+      if (opts.onlyMatched && model && hasWin()) {
+        rules = this.matchedRules(model, rules);
+      }
 
       rules.forEach(rule => {
         const atRule = rule.getAtRule();
@@ -130,11 +137,7 @@ export default Backbone.Model.extend({
       selectors.every(s => !s.get('editonly')) &&
       selectors.some(s => {
         const name = s.getFullName();
-        return (
-          this.compCls.indexOf(name) >= 0 ||
-          this.ids.indexOf(name) >= 0 ||
-          opts.keepUnusedStyles
-        );
+        return this.compCls.indexOf(name) >= 0 || this.ids.indexOf(name) >= 0 || opts.keepUnusedStyles;
       });
 
     if ((selectorStrNoAdd && found) || selectorsAdd || singleAtRule || !model) {
@@ -143,6 +146,39 @@ export default Backbone.Model.extend({
     } else {
       dump.push(rule);
     }
+
+    return result;
+  },
+
+  /**
+   * Get matched rules of a component
+   * @param {Component} component
+   * @param {Array<CSSRule>} rules
+   * @returns {Array<CSSRule>}
+   */
+  matchedRules(component, rules) {
+    const el = component.getEl();
+    let result = [];
+
+    rules.forEach(rule => {
+      try {
+        if (
+          rule
+            .selectorsToString()
+            .split(',')
+            .some(selector => el.matches(this.__cleanSelector(selector)))
+        ) {
+          result.push(rule);
+        }
+      } catch (err) {}
+    });
+
+    component.components().forEach(component => {
+      result = result.concat(this.matchedRules(component, rules));
+    });
+
+    // Remove duplicates
+    result = result.filter((rule, i) => result.indexOf(rule) === i);
 
     return result;
   },
@@ -168,9 +204,7 @@ export default Backbone.Model.extend({
     const itemsArr = [];
     each(items, (value, key) => itemsArr.push({ key, value }));
     return itemsArr.sort((a, b) => {
-      const isMobFirst = [a.key, b.key].every(
-        mquery => mquery.indexOf('min-width') !== -1
-      );
+      const isMobFirst = [a.key, b.key].every(mquery => mquery.indexOf('min-width') !== -1);
       const left = isMobFirst ? a.key : b.key;
       const right = isMobFirst ? b.key : a.key;
       return this.getQueryLength(left) - this.getQueryLength(right);
@@ -179,11 +213,22 @@ export default Backbone.Model.extend({
 
   sortRules(a, b) {
     const getKey = rule => rule.get('mediaText');
-    const isMobFirst = [getKey(a), getKey(b)].every(
-      q => q.indexOf('min-width') !== -1
-    );
+    const isMobFirst = [getKey(a), getKey(b)].every(q => q.indexOf('min-width') !== -1);
     const left = isMobFirst ? getKey(a) : getKey(b);
     const right = isMobFirst ? getKey(b) : getKey(a);
     return this.getQueryLength(left) - this.getQueryLength(right);
-  }
+  },
+
+  /**
+   * Return passed selector without states
+   * @param {String} selector
+   * @returns {String}
+   * @private
+   */
+  __cleanSelector(selector) {
+    return selector
+      .split(' ')
+      .map(item => item.split(':')[0])
+      .join(' ');
+  },
 });
