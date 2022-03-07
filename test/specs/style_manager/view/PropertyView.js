@@ -18,7 +18,9 @@ describe('PropertyView', () => {
   var defValue = 'testDefault';
 
   beforeEach(() => {
-    em = new Editor({});
+    em = new Editor({
+      mediaCondition: 'max-width',
+    });
     dcomp = new DomComponents();
     compOpts = { em, componentTypes: dcomp.componentTypes };
     target = new Component({}, compOpts);
