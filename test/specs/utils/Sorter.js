@@ -13,7 +13,7 @@ describe('Sorter', () => {
   var plh;
   var html;
 
-  beforeAll(function() {
+  beforeAll(function () {
     fixture = $('<div class="sorter-fixture"></div>').get(0);
   });
 
@@ -260,7 +260,7 @@ describe('Sorter', () => {
         [0, 0, 50, 100, true],
         [50, 0, 50, 100, true],
         [100, 0, 50, 100, true],
-        [150, 0, 50, 70, true]
+        [150, 0, 50, 70, true],
       ];
     });
 
@@ -276,7 +276,7 @@ describe('Sorter', () => {
       obj.onMove({
         pageX: 0,
         pageY: 0,
-        target: target
+        target: target,
       });
       expect(obj.moved).toEqual(1);
     });
@@ -293,7 +293,7 @@ describe('Sorter', () => {
       el.style.position = 'absolute';
       el.style.top = '0';
       var ch = obj.getChildrenDim(el);
-      ch = ch.map(function(v) {
+      ch = ch.map(function (v) {
         return v.slice(0, 5);
       });
       var subPos = obj.offset(sib1);
@@ -303,7 +303,7 @@ describe('Sorter', () => {
         [top, left, 50, 100, true],
         [top + 50, left + 0, 50, 100, true],
         [top + 100, left + 0, 50, 100, true],
-        [top + 100, left + 100, 50, 70, true]
+        [top + 100, left + 100, 50, 70, true],
       ];
       expect(ch).toEqual(result);
     });
@@ -335,15 +335,15 @@ describe('Sorter', () => {
         [top, left, 50, 100, true],
         [top + 50, left + 0, 50, 100, true],
         [topSib3, leftSib3, 50, 100, true],
-        [top + 100, left + 100, 50, 70, true]
+        [top + 100, left + 100, 50, 70, true],
       ];
       var resultChildren = [
         [topSib3, leftSib3, 30, 30, true],
-        [topSib3 + 30, left + 0, 20, 30, true]
+        [topSib3 + 30, left + 0, 20, 30, true],
       ];
 
       var dims = obj.dimsFromTarget(sib3);
-      dims = dims.map(function(v) {
+      dims = dims.map(function (v) {
         return v.slice(0, 5);
       });
 
@@ -351,30 +351,22 @@ describe('Sorter', () => {
 
       // Inside target
       var dims = obj.dimsFromTarget(sib3, leftSib3 + 15, topSib3 + 15);
-      dims = dims.map(function(v) {
+      dims = dims.map(function (v) {
         return v.slice(0, 5);
       });
       expect(dims).toEqual(resultChildren);
 
       // Exactly on border
       var bOffset = obj.borderOffset;
-      var dims = obj.dimsFromTarget(
-        sib3,
-        leftSib3 + bOffset,
-        topSib3 + bOffset
-      );
-      dims = dims.map(function(v) {
+      var dims = obj.dimsFromTarget(sib3, leftSib3 + bOffset, topSib3 + bOffset);
+      dims = dims.map(function (v) {
         return v.slice(0, 5);
       });
       expect(dims).toEqual(resultChildren);
 
       // Slightly near border
-      var dims = obj.dimsFromTarget(
-        sib3,
-        leftSib3 + bOffset - 3,
-        topSib3 + bOffset
-      );
-      dims = dims.map(function(v) {
+      var dims = obj.dimsFromTarget(sib3, leftSib3 + bOffset - 3, topSib3 + bOffset);
+      dims = dims.map(function (v) {
         return v.slice(0, 5);
       });
       expect(dims).toEqual(resultParent);
@@ -411,7 +403,7 @@ describe('Sorter', () => {
           [0, 10, 50, 100, true],
           [50, 20, 50, 70, true],
           [100, 30, 50, 100, true],
-          [150, 40, 50, 70, true]
+          [150, 40, 50, 70, true],
         ];
       });
 
@@ -436,56 +428,100 @@ describe('Sorter', () => {
   });
 
   describe('Valid Target with components', () => {
-    var parentModel;
-    var parentView;
-    var sorter;
+    describe('Droppable', () => {
+      var parentModel;
+      var parentView;
 
-    beforeEach(() => {
-      parentModel = new Component({
-        droppable: (srcModel, trgModel) => {
-          if (srcModel.getEl().className === 'canDrop') {
-            return true;
-          }
-          return false;
-        }
-      });
-      parentView = new ComponentTextView({
-        model: parentModel
+      beforeEach(() => {
+        parentModel = new Component({
+          droppable: (srcModel, trgModel) => {
+            return srcModel.getEl().className === 'canDrop';
+          },
+        });
+        parentView = new ComponentTextView({
+          model: parentModel,
+        });
       });
 
-      sorter = new Sorter({ container: parentView.el });
+      afterEach(() => {
+        parentView.remove();
+      });
+
+      test('Droppable function', () => {
+        var srcModel = new Component({
+          tagName: 'div',
+          draggable: true,
+          content: 'Content text',
+          attributes: { class: 'canDrop' },
+        });
+        var srcView = new ComponentTextView({
+          model: srcModel,
+        });
+
+        expect(obj.validTarget(parentView.el, srcView.el).valid).toEqual(true);
+      });
+
+      test('Not droppable function', () => {
+        var srcModel = new Component({
+          tagName: 'div',
+          draggable: true,
+          content: 'Content text',
+          attributes: { class: 'cannotDrop' },
+        });
+        var srcView = new ComponentTextView({
+          model: srcModel,
+        });
+
+        expect(obj.validTarget(parentView.el, srcView.el).valid).toEqual(false);
+      });
     });
 
-    afterEach(() => {
-      parentView.remove();
-    });
+    describe('Draggable', () => {
+      var srcModel;
+      var srcView;
 
-    test('Droppable function', () => {
-      var srcModel = new Component({
-        tagName: 'div',
-        draggable: true, // Can't move it
-        content: 'Content text', // Text inside component
-        attributes: { class: 'canDrop' }
-      });
-      var srcView = new ComponentTextView({
-        model: srcModel
-      });
-
-      expect(obj.validTarget(parentView.el, srcView.el).valid).toEqual(true);
-    });
-
-    test('Not droppable function', () => {
-      var srcModel = new Component({
-        tagName: 'div',
-        draggable: true,
-        content: 'Content text',
-        attributes: { class: 'cannotDrop' }
-      });
-      var srcView = new ComponentTextView({
-        model: srcModel
+      beforeEach(() => {
+        srcModel = new Component({
+          draggable: (srcModel, trgModel) => {
+            return trgModel.getEl().className === 'canDrag';
+          },
+        });
+        srcView = new ComponentTextView({
+          model: srcModel,
+        });
       });
 
-      expect(obj.validTarget(parentView.el, srcView.el).valid).toEqual(false);
+      afterEach(() => {
+        srcView.remove();
+      });
+
+      test('Draggable function', () => {
+        var parentModel = new Component({
+          tagName: 'div',
+          droppable: true,
+          content: 'Content text',
+          attributes: { class: 'canDrag' },
+        });
+        var parentView = new ComponentTextView({
+          model: parentModel,
+        });
+
+        expect(obj.validTarget(parentView.el, srcView.el).valid).toEqual(true);
+      });
+
+      test('Not draggable function', () => {
+        var parentModel = new Component({
+          tagName: 'div',
+          droppable: true,
+          content: 'Content text',
+          attributes: { class: 'cannotDrag' },
+        });
+        var parentView = new ComponentTextView({
+          model: parentModel,
+        });
+
+        expect(obj.validTarget(parentView.el, srcView.el).valid).toEqual(false);
+      });
     });
   });
 });

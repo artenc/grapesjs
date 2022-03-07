@@ -20,7 +20,7 @@ describe('HtmlGenerator', () => {
       {},
       {
         em,
-        componentTypes: dcomp.componentTypes
+        componentTypes: dcomp.componentTypes,
       }
     );
   });
@@ -43,12 +43,10 @@ describe('HtmlGenerator', () => {
       tagName: 'article',
       attributes: {
         'data-test1': 'value1',
-        'data-test2': 'value2'
-      }
+        'data-test2': 'value2',
+      },
     });
-    expect(obj.build(comp)).toEqual(
-      '<article data-test1="value1" data-test2="value2"></article>'
-    );
+    expect(obj.build(comp)).toEqual('<article data-test1="value1" data-test2="value2"></article>');
   });
 
   test('Build correctly component with classes', () => {
@@ -56,8 +54,8 @@ describe('HtmlGenerator', () => {
       tagName: 'article',
       attributes: {
         'data-test1': 'value1',
-        'data-test2': 'value2'
-      }
+        'data-test2': 'value2',
+      },
     });
     ['class1', 'class2'].forEach(item => {
       m1.get('classes').add({ name: item });
@@ -72,7 +70,9 @@ describe('CssGenerator', () => {
   let newCssComp;
 
   beforeEach(() => {
-    em = new Editor({});
+    em = new Editor({
+      mediaCondition: 'max-width',
+    });
     newCssComp = () => new CssComposer().init({ em });
 
     cc = em.get('CssComposer');
@@ -82,7 +82,7 @@ describe('CssGenerator', () => {
       {},
       {
         em,
-        componentTypes: dcomp.componentTypes
+        componentTypes: dcomp.componentTypes,
       }
     );
   });
@@ -105,12 +105,10 @@ describe('CssGenerator', () => {
       tagName: 'article',
       style: {
         prop1: 'value1',
-        prop2: 'value2'
-      }
+        prop2: 'value2',
+      },
     });
-    expect(obj.build(comp)).toEqual(
-      '#' + m1.getId() + '{prop1:value1;prop2:value2;}'
-    );
+    expect(obj.build(comp)).toEqual('#' + m1.getId() + '{prop1:value1;prop2:value2;}');
   });
 
   test('Build correctly component with class styled', () => {
@@ -121,9 +119,7 @@ describe('CssGenerator', () => {
     var rule = cssc.add(cls1);
     rule.set('style', { prop1: 'value1', prop2: 'value2' });
 
-    expect(obj.build(comp, { cssc })).toEqual(
-      '.class1{prop1:value1;prop2:value2;}'
-    );
+    expect(obj.build(comp, { cssc })).toEqual('.class1{prop1:value1;prop2:value2;}');
   });
 
   test('Build correctly component styled with class and state', () => {
@@ -135,9 +131,7 @@ describe('CssGenerator', () => {
     rule.set('style', { prop1: 'value1', prop2: 'value2' });
     rule.set('state', 'hover');
 
-    expect(obj.build(comp, { cssc })).toEqual(
-      '.class1:hover{prop1:value1;prop2:value2;}'
-    );
+    expect(obj.build(comp, { cssc })).toEqual('.class1:hover{prop1:value1;prop2:value2;}');
   });
 
   test('Build correctly with more classes', () => {
@@ -149,9 +143,7 @@ describe('CssGenerator', () => {
     var rule = cssc.add([cls1, cls2]);
     rule.set('style', { prop1: 'value1', prop2: 'value2' });
 
-    expect(obj.build(comp, { cssc })).toEqual(
-      '.class1.class2{prop1:value1;prop2:value2;}'
-    );
+    expect(obj.build(comp, { cssc })).toEqual('.class1.class2{prop1:value1;prop2:value2;}');
   });
 
   test('Build rules with mixed classes', () => {
@@ -175,9 +167,7 @@ describe('CssGenerator', () => {
     rule.set('style', { prop1: 'value1', prop2: 'value2' });
     rule.set('selectorsAdd', '.class1 .class2, div > .class4');
 
-    expect(obj.build(comp, { cssc })).toEqual(
-      '.class1 .class2, div > .class4{prop1:value1;prop2:value2;}'
-    );
+    expect(obj.build(comp, { cssc })).toEqual('.class1 .class2, div > .class4{prop1:value1;prop2:value2;}');
   });
 
   test('Build correctly with class styled out', () => {
@@ -191,9 +181,7 @@ describe('CssGenerator', () => {
     var rule2 = cssc.add(cls2);
     rule2.set('style', { prop2: 'value2' });
 
-    expect(obj.build(comp, { cssc })).toEqual(
-      '.class1.class2{prop1:value1;}.class2{prop2:value2;}'
-    );
+    expect(obj.build(comp, { cssc })).toEqual('.class1.class2{prop1:value1;}.class2{prop2:value2;}');
   });
 
   test('Rule with media query', () => {
@@ -206,9 +194,7 @@ describe('CssGenerator', () => {
     rule.set('style', { prop1: 'value1' });
     rule.set('mediaText', '(max-width: 999px)');
 
-    expect(obj.build(comp, { cssc })).toEqual(
-      '@media (max-width: 999px){.class1.class2{prop1:value1;}}'
-    );
+    expect(obj.build(comp, { cssc })).toEqual('@media (max-width: 999px){.class1.class2{prop1:value1;}}');
   });
 
   test('Rules mixed with media queries', () => {
@@ -263,7 +249,7 @@ describe('CssGenerator', () => {
       {},
       {
         em,
-        componentTypes: dcomp.componentTypes
+        componentTypes: dcomp.componentTypes,
       }
     );
     comp.setStyle({ color: 'red' });
@@ -299,7 +285,7 @@ describe('CssGenerator', () => {
     [
       ['@media (max-width: 999px)', 999],
       ['@media (min-width: 123%)', 123],
-      ['@media (min-width: 1040rem)', 1040]
+      ['@media (min-width: 1040rem)', 1040],
     ].forEach(item => {
       expect(obj.getQueryLength(item[0])).toBe(item[1]);
     });
@@ -312,14 +298,14 @@ describe('CssGenerator', () => {
         '@font-face': 2,
         '@media (max-width: 768px)': 3,
         '@media (max-width: 1020ch)': 4,
-        '@media (max-width: 10%)': 5
+        '@media (max-width: 10%)': 5,
       })
     ).toEqual([
       { key: '@font-face', value: 2 },
       { key: '@media (max-width: 1020ch)', value: 4 },
       { key: '@media (max-width: 768px)', value: 3 },
       { key: '@media (max-width: 480px)', value: 1 },
-      { key: '@media (max-width: 10%)', value: 5 }
+      { key: '@media (max-width: 10%)', value: 5 },
     ]);
   });
 
@@ -330,14 +316,14 @@ describe('CssGenerator', () => {
         '@font-face': 2,
         '@media (min-width: 768px)': 3,
         '@media (min-width: 1020ch)': 4,
-        '@media (min-width: 10%)': 5
+        '@media (min-width: 10%)': 5,
       })
     ).toEqual([
       { key: '@font-face', value: 2 },
       { key: '@media (min-width: 10%)', value: 5 },
       { key: '@media (min-width: 480px)', value: 1 },
       { key: '@media (min-width: 768px)', value: 3 },
-      { key: '@media (min-width: 1020ch)', value: 4 }
+      { key: '@media (min-width: 1020ch)', value: 4 },
     ]);
   });
 });

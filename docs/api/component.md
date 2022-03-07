@@ -28,10 +28,10 @@ component.get('tagName');
 *   `attributes` **[Object][2]?** Key-value object of the component's attributes, eg. `{ title: 'Hello' }` Default: `{}`
 *   `name` **[String][1]?** Name of the component. Will be used, for example, in Layers and badges
 *   `removable` **[Boolean][3]?** When `true` the component is removable from the canvas, default: `true`
-*   `draggable` **([Boolean][3] | [String][1])?** Indicates if it's possible to drag the component inside others.
+*   `draggable` **([Boolean][3] | [String][1] | [Function][4])?** Indicates if it's possible to drag the component inside others.
     You can also specify a query string to indentify elements,
     eg. `'.some-class[title=Hello], [data-gjs-type=column]'` means you can drag the component only inside elements
-    containing `some-class` class and `Hello` title, and `column` components. Default: `true`
+    containing `some-class` class and `Hello` title, and `column` components. In the case of a function, target and destination components are passed as arguments, return a Boolean to indicate if the drag is possible. Default: `true`
 *   `droppable` **([Boolean][3] | [String][1] | [Function][4])?** Indicates if it's possible to drop other components inside. You can use
     a query string as with `draggable`. In the case of a function, target and destination components are passed as arguments, return a Boolean to indicate if the drop is possible. Default: `true`
 *   `badgable` **[Boolean][3]?** Set to false if you don't want to see the badge (with the name) over the component. Default: `true`
@@ -48,6 +48,7 @@ component.get('tagName');
 *   `selectable` **[Boolean][3]?** Allow component to be selected when clicked. Default: `true`
 *   `hoverable` **[Boolean][3]?** Shows a highlight outline when hovering on the element if `true`. Default: `true`
 *   `void` **[Boolean][3]?** This property is used by the HTML exporter as void elements don't have closing tags, eg. `<br/>`, `<hr/>`, etc. Default: `false`
+*   `style` **[Object][2]?** Component default style, eg. `{ width: '100px', height: '100px', 'background-color': 'red' }`
 *   `styles` **[String][1]?** Component related styles, eg. `.my-component-class { color: red }`
 *   `content` **[String][1]?** Content of the component (not escaped) which will be appended before children rendering. Default: `''`
 *   `icon` **[String][1]?** Component's icon, this string will be inserted before the name (in Layers and badge), eg. it can be an HTML string '<i class="fa fa-square-o"></i>'. Default: `''`
@@ -60,7 +61,7 @@ component.get('tagName');
     and append some new component inside, the new added component will get the exact same properties indicated in the `propagate` array (and the `propagate` property itself). Default: `[]`
 *   `toolbar` **[Array][5]<[Object][2]>?** Set an array of items to show up inside the toolbar when the component is selected (move, clone, delete).
     Eg. `toolbar: [ { attributes: {class: 'fa fa-arrows'}, command: 'tlb-move' }, ... ]`.
-    By default, when `toolbar` property is falsy the editor will add automatically commands like `move`, `delete`, etc. based on its properties.
+    By default, when `toolbar` property is falsy the editor will add automatically commands `core:component-exit` (select parent component, added if there is one), `tlb-move` (added if `draggable`) , `tlb-clone` (added if `copyable`), `tlb-delete` (added if `removable`).
 *   `components` **Collection<[Component][9]>?** Children components. Default: `null`
 
 ### init
@@ -485,9 +486,41 @@ component.parent();
 
 Returns **([Component][9] | null)** 
 
+### getTraits
+
+Get traits.
+
+#### Examples
+
+```javascript
+const traits = component.getTraits();
+console.log(traits);
+// [Trait, Trait, Trait, ...]
+```
+
+Returns **[Array][5]\<Trait>** 
+
+### setTraits
+
+Replace current collection of traits with a new one.
+
+#### Parameters
+
+*   `traits` **[Array][5]<[Object][2]>** Array of trait definitions
+
+#### Examples
+
+```javascript
+const traits = component.setTraits([{ type: 'checkbox', name: 'disabled'}, ...]);
+console.log(traits);
+// [Trait, ...]
+```
+
+Returns **[Array][5]\<Trait>** 
+
 ### getTrait
 
-Get the trait by id/name
+Get the trait by id/name.
 
 #### Parameters
 
@@ -500,11 +533,11 @@ const traitTitle = component.getTrait('title');
 traitTitle && traitTitle.set('label', 'New label');
 ```
 
-Returns **Trait** Trait model
+Returns **(Trait | null)** Trait getModelToStyle
 
 ### updateTrait
 
-Update a trait
+Update a trait.
 
 #### Parameters
 
@@ -555,11 +588,11 @@ component.removeTrait('title');
 component.removeTrait(['title', 'id']);
 ```
 
-Returns **[Array][5]** Array of removed traits
+Returns **[Array][5]\<Trait>** Array of removed traits
 
 ### addTrait
 
-Add trait/s by id/s.
+Add new trait/s.
 
 #### Parameters
 
@@ -577,7 +610,7 @@ component.addTrait({
 component.addTrait(['title', {...}, ...]);
 ```
 
-Returns **[Array][5]** Array of added traits
+Returns **[Array][5]\<Trait>** Array of added traits
 
 ### getName
 
@@ -600,8 +633,9 @@ Return HTML string of the component
 *   `opts` **[Object][2]** Options (optional, default `{}`)
 
     *   `opts.tag` **[String][1]?** Custom tagName
-    *   `opts.attributes` **([Object][2] | [Function][4])** You can pass an object of custom attributes to replace
-        with the current one or you can even pass a function to generate attributes dynamically (optional, default `null`)
+    *   `opts.attributes` **([Object][2] | [Function][4])** You can pass an object of custom attributes to replace with the current ones or you can even pass a function to generate attributes dynamically. (optional, default `null`)
+    *   `opts.withProps` **[Boolean][3]?** Include component properties as `data-gjs-*` attributes. This allows you to have re-importable HTML.
+    *   `opts.altQuoteAttr` **[Boolean][3]?** In case the attribute value contains a `"` char, instead of escaping it (`attr="value &quot;"`), the attribute will be quoted using single quotes (`attr='value "'`).
 
 #### Examples
 
@@ -627,6 +661,16 @@ component.toHTML({
 });
 // -> <span title="Custom attribute"></span>
 ```
+
+Returns **[String][1]** HTML string
+
+### getInnerHTML
+
+Get inner HTML of the component
+
+#### Parameters
+
+*   `opts` **[Object][2]** Same options of `toHTML` (optional, default `{}`)
 
 Returns **[String][1]** HTML string
 
@@ -724,28 +768,49 @@ editor.getSelected().move(dest, { at: 0 });
 
 Returns **this** 
 
-### getList
+### isInstanceOf
 
-The list of components is taken from the Components module.
-Initially, the list, was set statically on the Component object but it was
-not ok, as it was shared between multiple editor instances
+Check if the component is an instance of some component type.
 
 #### Parameters
 
-*   `model`  
+*   `type` **[String][1]** Component type
 
-### checkId
+#### Examples
 
-This method checks, for each parsed component and style object
-(are not Components/CSSRules yet), for duplicated id and fixes them
-This method is used in Components.js just after the parsing
+```javascript
+// Add a new component type by extending an existing one
+editor.Components.addType('text-ext', { extend: 'text' });
+// Append a new component somewhere
+const newTextExt = editor.getSelected().append({ type: 'text-ext' })[0];
+newTextExt.isInstanceOf('text-ext'); // true
+newTextExt.isInstanceOf('text'); // true
+```
+
+Returns **[Boolean][3]** 
+
+### isChildOf
+
+Check if the component is a child of some other component (or component type)
 
 #### Parameters
 
-*   `components`  
-*   `styles`   (optional, default `[]`)
-*   `list`   (optional, default `{}`)
-*   `opts`   (optional, default `{}`)
+*   `component` **([[Component][9]] | [String][1])** Component parent to check. In case a string is passed,
+    the check will be performed on the component type.
+
+#### Examples
+
+```javascript
+const newTextComponent = editor.getSelected().append({
+ type: 'text',
+ components: 'My text <b>here</b>',
+})[0];
+const innerComponent = newTextComponent.find('b')[0];
+innerComponent.isChildOf(newTextComponent); // true
+innerComponent.isChildOf('text'); // true
+```
+
+Returns **[Boolean][3]** 
 
 [1]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
 

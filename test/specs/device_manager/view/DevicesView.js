@@ -12,7 +12,7 @@ describe('DevicesView', () => {
     model = new Devices([]);
     view = new DevicesView({
       collection: model,
-      config: { em: new Model() }
+      config: { em: new Model() },
     });
     document.body.innerHTML = '<div id="fixtures"></div>';
     document.body.querySelector('#fixtures').appendChild(view.render().el);
@@ -38,10 +38,13 @@ describe('DevicesView', () => {
   describe('With configs', () => {
     beforeEach(() => {
       editorModel = new Model();
-      model = new Devices([{ name: 'test1' }, { name: 'test2' }]);
+      model = new Devices([
+        { name: 'test1', mediaCondition: 'max-width' },
+        { name: 'test2', mediaCondition: 'max-width' },
+      ]);
       view = new DevicesView({
         collection: model,
-        config: { em: editorModel }
+        config: { em: editorModel },
       });
       document.body.innerHTML = '<div id="fixtures"></div>';
       document.body.querySelector('#fixtures').appendChild(view.render().el);
@@ -54,9 +57,7 @@ describe('DevicesView', () => {
     });
 
     test('Render options', () => {
-      expect(view.getOptions()).toEqual(
-        '<option value="test1">test1</option><option value="test2">test2</option>'
-      );
+      expect(view.getOptions()).toEqual('<option value="test1">test1</option><option value="test2">test2</option>');
     });
   });
 });
