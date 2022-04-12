@@ -26,7 +26,7 @@ export default class Frame extends Model {
       component: '',
       styles: '',
       _undo: true,
-      _undoexc: ['changesCount']
+      _undoexc: ['changesCount'],
     };
   }
 
@@ -125,12 +125,7 @@ export default class Frame extends Model {
 
   getHeadByAttr(attr, value, tag) {
     const head = this.getHead();
-    return head.filter(
-      item =>
-        item.attributes &&
-        item.attributes[attr] == value &&
-        (!tag || tag === item.tag)
-    )[0];
+    return head.filter(item => item.attributes && item.attributes[attr] == value && (!tag || tag === item.tag))[0];
   }
 
   removeHeadByAttr(attr, value, tag) {
@@ -151,8 +146,8 @@ export default class Frame extends Model {
         tag,
         attributes: {
           href,
-          rel: 'stylesheet'
-        }
+          rel: 'stylesheet',
+        },
       });
   }
 
@@ -165,7 +160,7 @@ export default class Frame extends Model {
     !this.getHeadByAttr('src', src, tag) &&
       this.addHeadItem({
         tag,
-        attributes: { src }
+        attributes: { src },
       });
   }
 
@@ -190,9 +185,9 @@ export default class Frame extends Model {
     const defaults = result(this, 'defaults');
 
     if (smc && !opts.fromUndo) {
-      const opts = { component: this.getComponent() };
-      if (smc.storeHtml) obj.html = em.getHtml(opts);
-      if (smc.storeCss) obj.css = em.getCss(opts);
+      const limitedOpts = { component: this.getComponent() };
+      if (smc.storeHtml) obj.html = em.getHtml(limitedOpts);
+      if (smc.storeCss) obj.css = em.getCss({ ...opts, ...limitedOpts });
     }
 
     if (opts.fromUndo) delete obj.component;
