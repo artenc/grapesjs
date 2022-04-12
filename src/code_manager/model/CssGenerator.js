@@ -130,17 +130,20 @@ export default Backbone.Model.extend({
 
     const selectors = rule.get('selectors').models;
 
+    const ruleFilter = opts.ruleFilter ? opts.ruleFilter(rule) : true;
+
     // This rule will render in case:
     // * all of selectors are not editonly
     // * if some component is using the rule or keepUnusedStyles is enabled
     const found =
+      ruleFilter &&
       selectors.every(s => !s.get('editonly')) &&
       selectors.some(s => {
         const name = s.getFullName();
         return this.compCls.indexOf(name) >= 0 || this.ids.indexOf(name) >= 0 || opts.keepUnusedStyles;
       });
 
-    if ((selectorStrNoAdd && found) || selectorsAdd || singleAtRule || !model) {
+    if (ruleFilter && ((selectorStrNoAdd && found) || selectorsAdd || singleAtRule || !model)) {
       const block = rule.getDeclaration({ body: 1 });
       block && (opts.json ? (result = rule) : (result += block));
     } else {
