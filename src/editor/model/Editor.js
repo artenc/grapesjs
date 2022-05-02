@@ -571,13 +571,11 @@ export default class EditorModel extends Model {
    */
   getHtml(opts = {}) {
     const { config } = this;
-    const { optsHtml, exportWrapper, wrapperIsBody } = config;
+    const { optsHtml } = config;
     const js = config.jsInHtml ? this.getJs(opts) : '';
     const cmp = opts.component || this.get('DomComponents').getComponent();
     let html = cmp
       ? this.get('CodeManager').getCode(cmp, 'html', {
-          exportWrapper,
-          wrapperIsBody,
           ...optsHtml,
           ...opts,
         })
@@ -594,7 +592,7 @@ export default class EditorModel extends Model {
    */
   getCss(opts = {}) {
     const config = this.config;
-    const { optsCss, wrapperIsBody } = config;
+    const { optsCss } = config;
     const avoidProt = opts.avoidProtected;
     const keepUnusedStyles = !isUndefined(opts.keepUnusedStyles) ? opts.keepUnusedStyles : config.keepUnusedStyles;
     const cssc = this.get('CssComposer');
@@ -604,7 +602,6 @@ export default class EditorModel extends Model {
       wrp &&
       this.get('CodeManager').getCode(wrp, 'css', {
         cssc,
-        wrapperIsBody,
         keepUnusedStyles,
         ...optsCss,
         ...opts,
@@ -801,6 +798,11 @@ export default class EditorModel extends Model {
 
   getCurrentFrameModel() {
     return (this.getCurrentFrame() || {}).model;
+  }
+
+  getIcon(icon) {
+    const icons = this.getConfig('icons') || {};
+    return icons[icon] || '';
   }
 
   /**

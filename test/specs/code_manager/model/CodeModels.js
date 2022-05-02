@@ -30,27 +30,27 @@ describe('HtmlGenerator', () => {
   });
 
   test('Build correctly one component', () => {
-    expect(obj.build(comp)).toEqual('');
-  });
-
-  test('Build correctly empty component inside', () => {
-    var m1 = comp.get('components').add({});
     expect(obj.build(comp)).toEqual('<div></div>');
   });
 
+  test('Build correctly empty component inside', () => {
+    comp.get('components').add({});
+    expect(obj.build(comp)).toEqual('<div><div></div></div>');
+  });
+
   test('Build correctly not empty component inside', () => {
-    var m1 = comp.get('components').add({
+    const m1 = comp.get('components').add({
       tagName: 'article',
       attributes: {
         'data-test1': 'value1',
         'data-test2': 'value2',
       },
     });
-    expect(obj.build(comp)).toEqual('<article data-test1="value1" data-test2="value2"></article>');
+    expect(obj.build(m1)).toEqual('<article data-test1="value1" data-test2="value2"></article>');
   });
 
   test('Build correctly component with classes', () => {
-    var m1 = comp.get('components').add({
+    const m1 = comp.get('components').add({
       tagName: 'article',
       attributes: {
         'data-test1': 'value1',
@@ -60,9 +60,7 @@ describe('HtmlGenerator', () => {
     ['class1', 'class2'].forEach(item => {
       m1.get('classes').add({ name: item });
     });
-    expect(obj.build(comp)).toEqual(
-      '<article data-test1="value1" data-test2="value2" class="class1 class2"></article>'
-    );
+    expect(obj.build(m1)).toEqual('<article data-test1="value1" data-test2="value2" class="class1 class2"></article>');
   });
 });
 

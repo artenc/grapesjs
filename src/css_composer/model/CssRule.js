@@ -36,6 +36,8 @@ export default class CssRule extends Model.extend(Styleable) {
       singleAtRule: false,
       important: false,
       group: '',
+      // If true, won't be stored in JSON or showed in CSS
+      shallow: false,
       _undo: true,
     };
   }
@@ -115,13 +117,11 @@ export default class CssRule extends Model.extend(Styleable) {
   selectorsToString(opts = {}) {
     const result = [];
     const state = this.get('state');
-    const wrapper = this.get('wrapper');
     const addSelector = this.get('selectorsAdd');
-    const isBody = wrapper && opts.body;
     const selOpts = {
       escape: str => (CSS && CSS.escape ? CSS.escape(str) : str),
     };
-    const selectors = isBody ? 'body' : this.get('selectors').getFullString(0, selOpts);
+    const selectors = this.get('selectors').getFullString(0, selOpts);
     const stateStr = state && !opts.skipState ? `:${state}` : '';
     selectors && result.push(`${selectors}${stateStr}`);
     addSelector && !opts.skipAdd && result.push(addSelector);
