@@ -524,4 +524,65 @@ describe('Sorter', () => {
       });
     });
   });
+  describe('Parents', () => {
+    var child00;
+    var child01;
+    var child0;
+    var child10;
+    var child1;
+    var child2;
+    var root;
+    beforeAll(() => {
+      child00 = new Component({
+        tagName: 'div',
+        name: 'child00',
+      });
+      child01 = new Component({
+        tagName: 'div',
+        name: 'child01',
+      });
+      child0 = new Component({
+        tagName: 'div',
+        name: 'child0',
+        components: [child00, child01],
+      });
+      child10 = new Component({
+        tagName: 'div',
+        name: 'child10',
+      });
+      child1 = new Component({
+        tagName: 'div',
+        name: 'child1',
+        components: [child10],
+      });
+      child2 = new Component({
+        tagName: 'div',
+        name: 'child2',
+      });
+      root = new Component({
+        tagName: 'div',
+        name: 'root',
+        components: [child0, child1, child2],
+      });
+    });
+    test('Parents', () => {
+      expect(obj.parents(root)).toEqual([root]);
+      expect(obj.parents(child0)).toEqual([child0, root]);
+      expect(obj.parents(child00)).toEqual([child00, child0, root]);
+    });
+    test('Sort', () => {
+      const withParents = model => ({ model, parents: obj.parents(model) });
+      expect(obj.sort(withParents(child00), withParents(child1))).toEqual(1);
+      expect(obj.sort(withParents(child00), withParents(child01))).toEqual(1);
+      expect(obj.sort(withParents(child00), withParents(child10))).toEqual(1);
+      expect(obj.sort(withParents(child1), withParents(child2))).toEqual(1);
+      expect(obj.sort(withParents(child10), withParents(child2))).toEqual(1);
+
+      expect(obj.sort(withParents(child1), withParents(child00))).toEqual(-1);
+      expect(obj.sort(withParents(child01), withParents(child00))).toEqual(-1);
+      expect(obj.sort(withParents(child10), withParents(child00))).toEqual(-1);
+      expect(obj.sort(withParents(child2), withParents(child1))).toEqual(-1);
+      expect(obj.sort(withParents(child2), withParents(child10))).toEqual(-1);
+    });
+  });
 });

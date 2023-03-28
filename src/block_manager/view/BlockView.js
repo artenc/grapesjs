@@ -1,15 +1,17 @@
-import Backbone from 'backbone';
 import { isFunction } from 'underscore';
-import { on, off, hasDnd } from 'utils/mixins';
+import { View } from '../../common';
+import { on, off, hasDnd } from '../../utils/mixins';
 
-export default Backbone.View.extend({
-  events: {
-    click: 'handleClick',
-    mousedown: 'startDrag',
-    dragstart: 'handleDragStart',
-    drag: 'handleDrag',
-    dragend: 'handleDragEnd',
-  },
+export default class BlockView extends View {
+  events() {
+    return {
+      click: 'handleClick',
+      mousedown: 'startDrag',
+      dragstart: 'handleDragStart',
+      drag: 'handleDrag',
+      dragend: 'handleDragEnd',
+    };
+  }
 
   initialize(o, config = {}) {
     const { model } = this;
@@ -19,11 +21,11 @@ export default Backbone.View.extend({
     this.ppfx = config.pStylePrefix || '';
     this.listenTo(model, 'destroy remove', this.remove);
     this.listenTo(model, 'change', this.render);
-  },
+  }
 
   __getModule() {
     return this.em.get('BlockManager');
-  },
+  }
 
   handleClick(ev) {
     const { config, model, em } = this;
@@ -38,7 +40,7 @@ export default Backbone.View.extend({
     const content = model.get('content');
     const selected = em.getSelected();
     sorter.setDropContent(content);
-    let target, valid;
+    let target, valid, insertAt;
 
     // If there is a selected component, try first to append
     // the block inside, otherwise, try to place it as a next sibling
@@ -50,7 +52,10 @@ export default Backbone.View.extend({
       } else {
         const parent = selected.parent();
         valid = sorter.validTarget(parent.getEl(), content);
-        if (valid.valid) target = parent;
+        if (valid.valid) {
+          target = parent;
+          insertAt = parent.components().indexOf(selected) + 1;
+        }
       }
     }
 
@@ -61,9 +66,9 @@ export default Backbone.View.extend({
       if (valid.valid) target = wrapper;
     }
 
-    const result = target && target.append(content)[0];
+    const result = target && target.append(content, { at: insertAt })[0];
     result && em.setSelected(result, { scroll: 1 });
-  },
+  }
 
   /**
    * Start block dragging
@@ -80,19 +85,19 @@ export default Backbone.View.extend({
     sorter.setDropContent(this.model.get('content'));
     sorter.startSort(this.el);
     on(document, 'mouseup', this.endDrag);
-  },
+  }
 
   handleDragStart(ev) {
     this.__getModule().__startDrag(this.model, ev);
-  },
+  }
 
   handleDrag(ev) {
     this.__getModule().__drag(ev);
-  },
+  }
 
   handleDragEnd() {
     this.__getModule().__endDrag();
-  },
+  }
 
   /**
    * Drop block
@@ -108,7 +113,7 @@ export default Backbone.View.extend({
     // the block helper I use the trick of 'moved = 0' to void those errors.
     sorter.moved = 0;
     sorter.endMove();
-  },
+  }
 
   render() {
     const { em, el, $el, ppfx, model } = this;
@@ -131,5 +136,5 @@ export default Backbone.View.extend({
     const result = render && render({ el, model, className, prefix: ppfx });
     if (result) el.innerHTML = result;
     return this;
-  },
-});
+  }
+}

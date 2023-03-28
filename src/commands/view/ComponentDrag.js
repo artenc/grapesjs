@@ -1,5 +1,5 @@
 import { keys, bindAll, each, isUndefined, debounce } from 'underscore';
-import Dragger from 'utils/Dragger';
+import Dragger from '../../utils/Dragger';
 
 const evName = 'dmode';
 
@@ -80,7 +80,7 @@ export default {
 
     if (!guidesEl) {
       const { editor, em, opts } = this;
-      const pfx = editor.getConfig('stylePrefix');
+      const pfx = editor.getConfig().stylePrefix;
       const elInfoX = document.createElement('div');
       const elInfoY = document.createElement('div');
       const guideContent = `<div class="${pfx}guide-info__line ${pfx}danger-bg">
