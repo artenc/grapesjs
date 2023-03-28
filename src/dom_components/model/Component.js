@@ -1057,6 +1057,15 @@ export default class Component extends StyleableModel {
   }
 
   /**
+   * Return all parents of the component.
+   * @returns {Array<Component>}
+   */
+  parents() {
+    const parent = this.parent();
+    return parent ? [parent].concat(parent.parents()) : [];
+  }
+
+  /**
    * Script updated
    * @private
    */
@@ -1709,8 +1718,21 @@ export default class Component extends StyleableModel {
    * editor.getSelected().move(dest, { at: 0 });
    */
   move(component, opts = {}) {
-    this.remove({ temporary: 1 });
-    component && component.append(this, opts);
+    if (component) {
+      const { at } = opts;
+      const index = this.index();
+      const sameParent = component === this.parent();
+      const sameIndex = index === at || index === at - 1;
+
+      if (!sameParent || !sameIndex) {
+        if (sameParent && at && at > index) {
+          opts.at = at - 1;
+        }
+        this.remove({ temporary: 1 });
+        component.append(this, opts);
+        this.emitUpdate();
+      }
+    }
     return this;
   }
 
