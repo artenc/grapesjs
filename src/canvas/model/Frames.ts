@@ -1,6 +1,6 @@
 import { bindAll } from 'underscore';
 import CanvasModule from '..';
-import { Collection } from '../../common';
+import { Collection } from '../../abstract';
 import Page from '../../pages/model/Page';
 import Frame from './Frame';
 
@@ -8,11 +8,9 @@ export default class Frames extends Collection<Frame> {
   loadedItems = 0;
   itemsToLoad = 0;
   page?: Page;
-  module: CanvasModule;
 
-  constructor(module: CanvasModule, models: Frame[] = []) {
-    super(models);
-    this.module = module;
+  constructor(module: CanvasModule, models: Frame[] | Array<Record<string, any>> = []) {
+    super(module, models, Frame);
     bindAll(this, 'itemLoaded');
     this.on('reset', this.onReset);
     this.on('remove', this.onRemove);

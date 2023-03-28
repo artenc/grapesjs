@@ -1,16 +1,13 @@
 import { includes } from 'underscore';
 import Backbone from 'backbone';
 import View from './View';
+import Collection from './Collection';
 import Model from './Model';
-/*interface DomainView<TView, TModel>{
-  constructor(model: TModel): TView
-}*/
-type TModel<TCollection> = TCollection extends Backbone.Collection<infer TModel> ? TModel : Model;
 
 export default abstract class DomainViews<
-  TCollection extends Backbone.Collection<Model>,
+  TCollection extends Collection,
   TItemView extends View
-> extends View<TModel<TCollection>> {
+> extends View<TCollection> {
   // Defines the View per type
   itemsView = '';
 
@@ -29,7 +26,7 @@ export default abstract class DomainViews<
    * @param {Model} model
    * @private
    * */
-  private addTo(model: TModel<TCollection>) {
+  private addTo(model: Model) {
     this.add(model);
   }
 
@@ -38,7 +35,7 @@ export default abstract class DomainViews<
     const warn = `${ns ? `[${ns}]: ` : ''}'${type}' type not found`;
     em?.logWarning(warn);*/
   }
-  protected abstract renderView(model: TModel<TCollection>, itemType: string): TItemView;
+  protected abstract renderView(model: Model, itemType: string): TItemView;
 
   /**
    * Render new model inside the view
@@ -46,7 +43,7 @@ export default abstract class DomainViews<
    * @param {Object} fragment Fragment collection
    * @private
    * */
-  private add(model: TModel<TCollection>, fragment?: DocumentFragment) {
+  private add(model: Model, fragment?: DocumentFragment) {
     const { reuseView, viewCollection, itemsView = {} } = this;
     var frag = fragment || null;
     var typeField = model.get(this.itemType);
@@ -72,10 +69,7 @@ export default abstract class DomainViews<
     this.clearItems();
     this.$el.empty();
 
-    if (this.collection.length)
-      this.collection.each(model => {
-        this.add(model, frag);
-      }, this);
+    if (this.collection.length) this.collection.each(model => this.add(model, frag));
 
     this.$el.append(frag);
     this.onRender();

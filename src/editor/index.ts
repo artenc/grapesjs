@@ -1,6 +1,6 @@
 /**
  * Editor contains the top level API which you'll probably use to customize the editor or extend it with plugins.
- * You get the Editor instance on init method and you can pass options via its [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/editor/config/config.js)
+ * You get the Editor instance on init method and you can pass options via its [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/editor/config/config.ts)
  *
  * ```js
  * const editor = grapesjs.init({
@@ -63,6 +63,13 @@ import html from '../utils/html';
 import defaults from './config/config';
 import EditorModel from './model/Editor';
 import EditorView from './view/EditorView';
+
+export type ParsedRule = {
+  selectors: string;
+  style: Record<string, string>;
+  atRule?: string;
+  params?: string;
+};
 
 export default class EditorModule implements IBaseModule<typeof defaults> {
   constructor(config = {}, opts: any = {}) {
@@ -486,7 +493,7 @@ export default class EditorModule implements IBaseModule<typeof defaults> {
    * @example
    * editor.runCommand('myCommand', {someValue: 1});
    */
-  runCommand(id: string, options = {}) {
+  runCommand(id: string, options: Record<string, unknown> = {}) {
     return this.em.get('Commands').run(id, options);
   }
 
@@ -498,7 +505,7 @@ export default class EditorModule implements IBaseModule<typeof defaults> {
    * @example
    * editor.stopCommand('myCommand', {someValue: 1});
    */
-  stopCommand(id: string, options = {}) {
+  stopCommand(id: string, options: Record<string, unknown> = {}) {
     return this.em.get('Commands').stop(id, options);
   }
 
@@ -644,7 +651,7 @@ export default class EditorModule implements IBaseModule<typeof defaults> {
    *  return result;
    * });
    */
-  setCustomParserCss(parser: any) {
+  setCustomParserCss(parser: (css: string, editor: EditorModule) => ParsedRule[]) {
     this.Parser.getConfig().parserCss = parser;
     return this;
   }

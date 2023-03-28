@@ -1,5 +1,6 @@
 import { Model } from '../../abstract';
 import { evPageSelect } from '../../pages';
+import { evUpdate as evDeviceUpdate } from '../../device_manager';
 import Frames from './Frames';
 import Page from '../../pages/model/Page';
 import CanvasModule from '..';
@@ -26,7 +27,7 @@ export default class Canvas extends Model<CanvasModule> {
     super(module, { scripts, styles });
     this.set('frames', new Frames(module));
     this.listenTo(this, 'change:zoom', this.onZoomChange);
-    this.listenTo(em, 'change:device', this.updateDevice);
+    this.listenTo(em, `change:device ${evDeviceUpdate}`, this.updateDevice);
     this.listenTo(em, evPageSelect, this._pageUpdated);
   }
 
@@ -37,18 +38,17 @@ export default class Canvas extends Model<CanvasModule> {
   init() {
     const { em } = this;
     const mainPage = em.get('PageManager').getMain();
-    const frame = mainPage.getMainFrame();
     this.set('frames', mainPage.getFrames());
-    this.updateDevice({ frame });
+    this.updateDevice({ frame: mainPage.getMainFrame() });
   }
 
   _pageUpdated(page: Page, prev?: Page) {
     const { em } = this;
     em.setSelected();
     em.get('readyCanvas') && em.stopDefault(); // We have to stop before changing current frames
-    //@ts-ignore
     prev?.getFrames().map(frame => frame.disable());
     this.set('frames', page.getFrames());
+    this.updateDevice({ frame: page.getMainFrame() });
   }
 
   updateDevice(opts: any = {}) {

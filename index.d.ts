@@ -175,7 +175,7 @@ declare namespace grapesjs {
      * 'absolute' - Move components absolutely (design tools way)
      * 'translate' - Use translate CSS from transform property
      * To get more about this feature read: https://github.com/artf/grapesjs/issues/1936 */
-    dragMode?: boolean;
+    dragMode?: 'translate' | 'absolute';
 
     /** When the editor is placed in a scrollable container (eg. modals) this might
      * cause elements inside the canvas (eg. floating toolbars) to be misaligned.
@@ -245,6 +245,9 @@ declare namespace grapesjs {
     /** Configurations for Trait Manager */
     traitManager?: TraitManagerConfig | boolean;
 
+    /** Configurations for Page Manager */
+    pageManager?: PageManagerConfig;
+
     /** Texts **/
     textViewCode?: string;
 
@@ -276,6 +279,10 @@ declare namespace grapesjs {
     dropzoneContent?: string;
     modalTitle?: string;
     inputPlaceholder?: string;
+    custom?: boolean | {
+      open?: (props: any) => void,
+      close?: (props: any) => void,
+    };
   }
 
   interface CanvasConfig {
@@ -319,6 +326,10 @@ declare namespace grapesjs {
     labelPlhRef?: string;
     optionsTarget?: Array<object>;
     textNoElement?: string;
+  }
+
+  interface PageManagerConfig {
+    pages?: any;
   }
 
   interface StorageManagerConfig {
@@ -546,6 +557,7 @@ declare namespace grapesjs {
     placeholder?: string;
     changeProp?: number;
     options?: SelectOption[];
+    command?: (editor: Editor) => void;
     [key: string]: any;
   }
 
@@ -786,7 +798,7 @@ declare namespace grapesjs {
      * @param components - HTML string or components model
      * @param opt - the options object to be used by the [setComponents]{@link em#setComponents} method
      */
-    setComponents(components: object[] | any | string, opt: any): any;
+    setComponents(components: object[] | any | string, opt?: any): any;
     /**
      * Add components
      * @example
@@ -805,7 +817,7 @@ declare namespace grapesjs {
      */
     addComponents(
       components: object[] | any | string,
-      opts: {
+      opts?: {
         avoidUpdateStyle?: boolean;
       }
     ): Component[];
@@ -921,7 +933,7 @@ declare namespace grapesjs {
      * @param options - Custom options
      * @returns The return is defined by the command
      */
-    runCommand(id: string, options: any): any;
+    runCommand(id: string, options?: Record<string, unknown>): any;
     /**
      * Stop the command if stop method was provided
      * @example
@@ -930,7 +942,7 @@ declare namespace grapesjs {
      * @param options - Custom options
      * @returns The return is defined by the command
      */
-    stopCommand(id: string, options: any): any;
+    stopCommand(id: string, options?: Record<string, unknown>): any;
     /**
      * Store data to the current storage
      * @param options - Storage options
@@ -1215,11 +1227,9 @@ declare namespace grapesjs {
   type ModalEvent = 'modal:open' | 'modal:close';
 
   type CommandEvent =
-    | 'run:{commandName}'
-    | 'stop:{commandName}'
-    | 'run:{commandName}:before'
-    | 'stop:{commandName}:before'
-    | 'abort:{commandName}';
+    | `run:${string}`
+    | `stop:${string}`
+    | `abort:${string}`;
 
   type GeneralEvent = 'canvasScroll' | 'undo' | 'redo' | 'load';
 
@@ -1574,6 +1584,13 @@ declare namespace grapesjs {
     ): HTMLElement;
   }
 
+  interface BlockCategoryOptions {
+    id: string,
+    label: string,
+    open?: boolean,
+    attributes?: Record<string, any>,
+  }
+
   interface BlockOptions {
     /**
      * Block label, eg. `My block`
@@ -1592,7 +1609,7 @@ declare namespace grapesjs {
      * Block category, eg. `Basic blocks`
      * @defaultValue ''
      */
-    category?: string;
+    category?: string | BlockCategoryOptions;
     /**
      * If true, triggers the `active` event on the dropped component.
      */
@@ -1613,6 +1630,10 @@ declare namespace grapesjs {
      * Custom behavior on click, eg. `(block, editor) => editor.getWrapper().append(block.get('content'))`
      */
     onClick?: (...params: any[]) => any;
+    /**
+     * Block attributes
+     */
+    attributes?: Record<string, any>;
   }
   interface Block extends Backbone.Model<BlockOptions> {
     /**
@@ -1701,10 +1722,12 @@ declare namespace grapesjs {
      */
     add(
       id: string,
-      command: (editor: Editor, sender?: any, opts?: Record<string, any>) => any | {
-        run: (editor: Editor, sender?: any) => any;
-        stop: (editor: Editor, sender?: any) => any;
-      }
+      command: ((editor: Editor, sender?: any, opts?: Record<string, any>) => any) |
+        {
+          run?: (editor: Editor, sender?: any, opts?: Record<string, any>) => any;
+          stop?: (editor: Editor, sender?: any, opts?: Record<string, any>) => any;
+          [key: string]: unknown;
+        }
     ): void;
     /**
      * Get command by ID
@@ -1780,8 +1803,12 @@ declare namespace grapesjs {
 
   interface AddComponentOptions {
     isComponent?: (el: HTMLElement) => boolean | ComponentDefinition;
-    model?: ComponentModelDefinition;
-    view?: ComponentViewDefinition;
+    model?: ThisType<ComponentModelDefinition & Component>;
+    view?: ThisType<ComponentViewDefinition & ComponentView>;
+    extend?: string,
+    extendView?: string,
+    extendFn?: string[],
+    extendFnView?: string[],
   }
 
   interface ComponentModelDefinition {
@@ -1790,14 +1817,16 @@ declare namespace grapesjs {
     handlePropChange?: (this: Component) => void;
     handleAttrChange?: (this: Component) => void;
     handleTitleChange?: (this: Component) => void;
+    [key: string]: any;
   }
 
   interface ComponentViewDefinition {
-    tagName: string;
-    events: Record<string, string>;
+    tagName?: string;
+    events?: Record<string, string>;
     init?: (options: { model: Component }) => void;
     removed?: () => void;
     onRender?: (options: { el: HTMLElement; model: Component }) => void;
+    [key: string]: any;
   }
 
   /**
@@ -2123,14 +2152,14 @@ declare namespace grapesjs {
      * Component's traits. More about it [here](/modules/Traits.html). Default: `['id', 'title']`
      * @defaultValue ''
      */
-    traits?: TraitOptions[] | String[] | Backbone.Collection<Trait>;
+    traits?: (Partial<TraitOptions> | string)[] | Backbone.Collection<Trait>;
     /**
        * Indicates an array of properties which will be inhereted by all NEW appended children.
        For example if you create a component likes this: `{ removable: false, draggable: false, propagate: ['removable', 'draggable'] }`
        and append some new component inside, the new added component will get the exact same properties indicated in the `propagate` array (and the `propagate` property itself). Default: `[]`
        * @defaultValue []
        */
-    propagate?: String[];
+    propagate?: string[];
     /**
        * Set an array of items to show up inside the toolbar when the component is selected (move, clone, delete).
       Eg. `toolbar: [ { attributes: {class: 'fa fa-arrows'}, command: 'tlb-move' }, ... ]`.
@@ -2287,7 +2316,7 @@ declare namespace grapesjs {
      * @param attrs - Key value attributes
      * @param options - Options for the model update
      */
-    setAttributes(attrs: any, options: any): this;
+    setAttributes(attrs: any, options?: any): this;
 
     /**
      * Add attributes to the component
@@ -2296,7 +2325,7 @@ declare namespace grapesjs {
      * @param attrs - Key value attributes
      * @param options - Options for the model update
      */
-    addAttributes(attrs: any, options: any): this;
+    addAttributes(attrs: any, options?: any): this;
 
     /**
      * Remove attributes from the component
@@ -2306,7 +2335,7 @@ declare namespace grapesjs {
      * @param attrs - Array of attributes to remove
      * @param options - Options for the model update
      */
-    removeAttributes(attrs: string | String[], options: any): this;
+    removeAttributes(attrs: string | String[], options?: any): this;
 
     /**
      * Get the style of the component
@@ -2921,7 +2950,7 @@ declare namespace grapesjs {
      * // Set as a target the CSS selector
      * styleManager.select('.btn > span');
      */
-    select(): any;
+    select(toSelect: any): any;
     /**
      * Get the last selected target.
      * By default, the Style Manager shows styles of the last selected target.
@@ -4263,7 +4292,7 @@ declare namespace grapesjs {
         atRuleType?: string;
         atRuleParams?: string;
       }
-    ): any;
+    ): CssRule | undefined;
     /**
      * Get all rules or filtered by a matching selector.
      * @example
@@ -4275,7 +4304,7 @@ declare namespace grapesjs {
      * console.log(css.getRules())
      * @param [selector = ''] - Selector, eg. `.myclass`
      */
-    getRules(selector?: string): any;
+    getRules(selector?: string): CssRule[];
     /**
      * Remove rule, by CssRule or matching selector (eg. the selector will match also at-rules like `@media`)
      * @example
@@ -4375,7 +4404,7 @@ declare namespace grapesjs {
       [Component]: component.html
        * @defaultValue true
        */
-    stylable?: boolean;
+    stylable?: boolean | string[];
   }
   interface CssRule extends Backbone.Model<CssRuleOptions>, Styleable {
     /**
@@ -4569,6 +4598,10 @@ declare namespace grapesjs {
      * modal.getContent();
      */
     getContent(): string | HTMLElement;
+    /**
+     * Returns content element
+     */
+    getContentEl(): HTMLElement | undefined;
   }
 
   /**

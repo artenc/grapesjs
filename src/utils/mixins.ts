@@ -292,8 +292,17 @@ const createId = (length = 16) => {
 
 export const buildBase64UrlFromSvg = (svg: string) => {
   if (svg && svg.substr(0, 4) === '<svg') {
-    return `data:image/svg+xml;base64,${window.btoa(svg)}`;
+    let base64Str = '';
+
+    if (hasWin()) {
+      base64Str = window.btoa(svg);
+    } else if (typeof Buffer !== 'undefined') {
+      base64Str = Buffer.from(svg, 'utf8').toString('base64');
+    }
+
+    return base64Str ? `data:image/svg+xml;base64,${base64Str}` : svg;
   }
+
   return svg;
 };
 
