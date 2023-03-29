@@ -14,6 +14,9 @@ import ComponentManager from '../../dom_components';
 import CssComposer from '../../css_composer';
 import { EditorConfig, EditorConfigKeys } from '../config/config';
 import Component from '../../dom_components/model/Component';
+import BlockManager from '../../block_manager';
+import SelectorManager from '../../selector_manager';
+import ParserModule from '../../parser';
 
 //@ts-ignore
 Backbone.$ = $;
@@ -120,6 +123,18 @@ export default class EditorModel extends Model {
 
   get Css(): CssComposer {
     return this.get('CssComposer');
+  }
+
+  get Blocks(): BlockManager {
+    return this.get('BlockManager');
+  }
+
+  get Selectors(): SelectorManager {
+    return this.get('SelectorManager');
+  }
+
+  get Parser(): ParserModule {
+    return this.get('Parser');
   }
 
   constructor(conf: EditorConfig = {}) {

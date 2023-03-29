@@ -38,7 +38,7 @@ export default class PropertySelect extends Property {
    * @returns {Object | null}
    */
   getOption(id) {
-    const idSel = id || this.getValue();
+    const idSel = isDef(id) ? id : this.getValue();
     return this.getOptions().filter(o => this.getOptionId(o) === idSel)[0] || null;
   }
 
@@ -84,7 +84,7 @@ export default class PropertySelect extends Property {
     const option = (isString(id) ? this.getOption(id) : id) || {};
     const optId = this.getOptionId(option);
     const label = option.label || option.name || optId;
-    const propId = this.getId();
+    const propId = opts.property || this.getId();
     return (locale && this.em?.t(`styleManager.options.${propId}.${optId}`)) || label;
   }
 
