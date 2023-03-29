@@ -43,30 +43,24 @@
  * @module Keymaps
  */
 
-import { isString } from 'underscore';
-import { hasWin, isObject } from '../utils/mixins';
+import { isFunction, isString } from 'underscore';
+import { hasWin } from '../utils/mixins';
 import keymaster from '../utils/keymaster';
 import { Module } from '../abstract';
 import EditorModel from '../editor/model/Editor';
 import defaults, { Keymap, KeymapOptions, KeymapsConfig } from './config';
 
+export type KeymapEvent = 'keymap:add' | 'keymap:remove' | 'keymap:emit' | `keymap:emit:${string}`;
+
 hasWin() && keymaster.init(window);
 
 export default class KeymapsModule extends Module<KeymapsConfig & { name?: string }> {
-  keymaster = keymaster;
+  keymaster: any = keymaster;
   keymaps: Record<string, Keymap>;
 
   constructor(em: EditorModel) {
     super(em, 'Keymaps', defaults);
     this.keymaps = {};
-  }
-
-  /**
-   * Get module configurations
-   * @return {Object} Configuration object
-   */
-  getConfig() {
-    return this.config;
   }
 
   onLoad() {
@@ -77,6 +71,13 @@ export default class KeymapsModule extends Module<KeymapsConfig & { name?: strin
       this.add(id, value.keys, value.handler, value.opts || {});
     }
   }
+
+  /**
+   * Get configuration object
+   * @name getConfig
+   * @function
+   * @return {Object}
+   */
 
   /**
    * Add new keymap
@@ -101,7 +102,7 @@ export default class KeymapsModule extends Module<KeymapsConfig & { name?: strin
    */
   add(id: Keymap['id'], keys: Keymap['keys'], handler: Keymap['handler'], opts: KeymapOptions = {}) {
     const { em } = this;
-    const cmd = em.get('Commands');
+    const cmd = em.Commands;
     const editor = em.getEditor();
     const canvas = em.Canvas;
     const keymap: Keymap = { id, keys, handler };
@@ -117,7 +118,7 @@ export default class KeymapsModule extends Module<KeymapsConfig & { name?: strin
         const ableTorun = !em.isEditing() && !editor.Canvas.isInputFocused();
         if (ableTorun || opts.force) {
           opts.prevent && canvas.getCanvasView().preventDefault(e);
-          isObject(handlerRes) ? cmd.runCommand(handlerRes, opt) : handlerRes(editor, 0, opt);
+          isFunction(handlerRes) ? handlerRes(editor, 0, opt) : cmd.runCommand(handlerRes, opt);
           const args = [id, h.shortcut, e];
           em.trigger('keymap:emit', ...args);
           em.trigger(`keymap:emit:${id}`, ...args);

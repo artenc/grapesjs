@@ -1,11 +1,8 @@
 import { isString, isArray, keys } from 'underscore';
 import { shallowDiff } from '../../utils/mixins';
 import ParserHtml from '../../parser/model/ParserHtml';
-import { Model } from '../../common';
-import { ObjectHash } from 'backbone';
+import { Model, ObjectAny, ObjectHash } from '../../common';
 import Selectors from '../../selector_manager/model/Selectors';
-
-type AnyObject = Record<string, any>;
 
 const parserHtml = ParserHtml();
 
@@ -25,7 +22,7 @@ export default class StyleableModel<T extends ObjectHash = any> extends Model<T>
    * @param {Object} prop
    * @return {Object}
    */
-  extendStyle(prop: AnyObject): AnyObject {
+  extendStyle(prop: ObjectAny): ObjectAny {
     return { ...this.getStyle(), ...prop };
   }
 
@@ -33,9 +30,9 @@ export default class StyleableModel<T extends ObjectHash = any> extends Model<T>
    * Get style object
    * @return {Object}
    */
-  getStyle(prop?: string | AnyObject) {
+  getStyle(prop?: string | ObjectAny) {
     const style = this.get('style') || {};
-    const result: AnyObject = { ...style };
+    const result: ObjectAny = { ...style };
     return prop && isString(prop) ? result[prop] : result;
   }
 
@@ -45,7 +42,7 @@ export default class StyleableModel<T extends ObjectHash = any> extends Model<T>
    * @param {Object} opts
    * @return {Object} Applied properties
    */
-  setStyle(prop: string | AnyObject = {}, opts: AnyObject = {}) {
+  setStyle(prop: string | ObjectAny = {}, opts: ObjectAny = {}) {
     if (isString(prop)) {
       prop = this.parseStyle(prop);
     }
@@ -85,7 +82,7 @@ export default class StyleableModel<T extends ObjectHash = any> extends Model<T>
    * this.addStyle({color: 'red'});
    * this.addStyle('color', 'blue');
    */
-  addStyle(prop: string | AnyObject, value = '', opts = {}) {
+  addStyle(prop: string | ObjectAny, value = '', opts = {}) {
     if (typeof prop == 'string') {
       prop = {
         prop: value,
@@ -113,7 +110,7 @@ export default class StyleableModel<T extends ObjectHash = any> extends Model<T>
    * @param {Object} [opts={}] Options
    * @return {String}
    */
-  styleToString(opts: AnyObject = {}) {
+  styleToString(opts: ObjectAny = {}) {
     const result = [];
     const style = this.getStyle(opts);
 
@@ -132,7 +129,7 @@ export default class StyleableModel<T extends ObjectHash = any> extends Model<T>
     return (this.get('selectors') || this.get('classes')) as Selectors;
   }
 
-  getSelectorsString(opts?: AnyObject) {
+  getSelectorsString(opts?: ObjectAny) {
     // @ts-ignore
     return this.selectorsToString ? this.selectorsToString(opts) : this.getSelectors().getFullString();
   }

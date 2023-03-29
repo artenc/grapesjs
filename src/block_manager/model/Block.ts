@@ -1,7 +1,8 @@
 import { Model } from '../../common';
 import { isFunction } from 'underscore';
-import EditorModule from '../../editor';
+import Editor from '../../editor';
 import { BlockCategoryProperties } from './Category';
+import { ComponentDefinition } from '../../dom_components/model/types';
 
 /** @private */
 export interface BlockProperties {
@@ -12,7 +13,7 @@ export interface BlockProperties {
   /**
    * The content of the block. Might be an HTML string or a [Component Defintion](/modules/Components.html#component-definition)
    */
-  content: string | any;
+  content: string | ComponentDefinition;
   /**
    * HTML string for the media/icon of the block, eg. `<svg ...`, `<img ...`, etc.
    * @default ''
@@ -48,7 +49,7 @@ export interface BlockProperties {
    * @example
    * onClick: (block, editor) => editor.getWrapper().append(block.get('content'))
    */
-  onClick?: (block: Block, editor: EditorModule) => void;
+  onClick?: (block: Block, editor: Editor) => void;
   /**
    * Block attributes
    */

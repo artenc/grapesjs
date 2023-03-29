@@ -1,10 +1,11 @@
 import { result, forEach, isEmpty, isString } from 'underscore';
-import { Model } from '../../abstract';
+import { ModuleModel } from '../../abstract';
 import CanvasModule from '..';
 import ComponentWrapper from '../../dom_components/model/ComponentWrapper';
 import { isComponent, isObject } from '../../utils/mixins';
 import FrameView from '../view/FrameView';
 import Frames from './Frames';
+import Page from '../../pages/model/Page';
 
 const keyAutoW = '__aw';
 const keyAutoH = '__ah';
@@ -17,7 +18,7 @@ const keyAutoH = '__ah';
  * @property {Number} [y=0] Vertical position of the frame in the canvas.
  *
  */
-export default class Frame extends Model<CanvasModule> {
+export default class Frame extends ModuleModel<CanvasModule> {
   defaults() {
     return {
       x: 0,
@@ -42,16 +43,16 @@ export default class Frame extends Model<CanvasModule> {
     super(module, attr);
     const { em } = this;
     const { styles, component } = this.attributes;
-    const domc = em.get('DomComponents');
+    const domc = em.Components;
     const conf = domc.getConfig();
-    const allRules = em.get('CssComposer').getAll();
+    const allRules = em.Css.getAll();
     const idMap: any = {};
     const modOpts = { em, config: conf, frame: this, idMap };
 
     if (!isComponent(component)) {
       const wrp = isObject(component) ? component : { components: component };
       !wrp.type && (wrp.type = 'wrapper');
-      const Wrapper = domc.getType('wrapper').model;
+      const Wrapper = domc.getType('wrapper')!.model;
       this.set('component', new Wrapper(wrp, modOpts));
     }
 
@@ -173,7 +174,7 @@ export default class Frame extends Model<CanvasModule> {
     this.removeHeadByAttr('src', src, 'script');
   }
 
-  getPage() {
+  getPage(): Page | undefined {
     return (this.collection as unknown as Frames)?.page;
   }
 
@@ -182,7 +183,7 @@ export default class Frame extends Model<CanvasModule> {
   }
 
   toJSON(opts: any = {}) {
-    const obj = Model.prototype.toJSON.call(this, opts);
+    const obj = ModuleModel.prototype.toJSON.call(this, opts);
     const defaults = result(this, 'defaults');
 
     if (opts.fromUndo) delete obj.component;

@@ -1,22 +1,22 @@
-import { each, isString, isFunction, isUndefined } from 'underscore';
-import { CssRuleProperties } from '../../css_composer/model/CssRule';
+import { each, isFunction, isUndefined } from 'underscore';
+import { ObjectAny } from '../../common';
+import { CssRuleJSON } from '../../css_composer/model/CssRule';
+import { ComponentDefinitionDefined } from '../../dom_components/model/types';
 import EditorModel from '../../editor/model/Editor';
 import { HTMLParserOptions, ParserConfig } from '../config/config';
 import BrowserParserHtml from './BrowserParserHtml';
 
-type AnyObject = Record<string, any>;
-
 type StringObject = Record<string, string>;
 
 type HTMLParseResult = {
-  html: null | Record<string, any> | Record<string, any>[]; // TODO replace with components
-  css: null | CssRuleProperties[];
+  html?: ComponentDefinitionDefined | ComponentDefinitionDefined[]; // TODO replace with components
+  css?: CssRuleJSON[];
 };
 
 const modelAttrStart = 'data-gjs-';
 const event = 'parse:html';
 
-export default (em?: EditorModel, config: ParserConfig = {}) => {
+const ParserHtml = (em?: EditorModel, config: ParserConfig = {}) => {
   return {
     compTypes: '',
 
@@ -48,8 +48,8 @@ export default (em?: EditorModel, config: ParserConfig = {}) => {
      * @param {Object} attr
      * @returns {Object} An object containing props and attributes without them
      */
-    splitPropsFromAttr(attr: AnyObject = {}) {
-      const props: AnyObject = {};
+    splitPropsFromAttr(attr: ObjectAny = {}) {
+      const props: ObjectAny = {};
       const attrs: StringObject = {};
 
       each(attr, (value, key) => {
@@ -117,8 +117,8 @@ export default (em?: EditorModel, config: ParserConfig = {}) => {
      * @param  {HTMLElement} el DOM element to traverse
      * @return {Array<Object>}
      */
-    parseNode(el: HTMLElement, opts: AnyObject = {}) {
-      const result = [];
+    parseNode(el: HTMLElement, opts: ObjectAny = {}) {
+      const result: ComponentDefinitionDefined[] = [];
       const nodes = el.childNodes;
 
       for (var i = 0, len = nodes.length; i < len; i++) {
@@ -128,7 +128,7 @@ export default (em?: EditorModel, config: ParserConfig = {}) => {
         const nodePrev = result[result.length - 1];
         const nodeChild = node.childNodes.length;
         const ct = this.compTypes;
-        let model: Record<string, any> = {}; // TODO use component properties
+        let model: ComponentDefinitionDefined = {}; // TODO use component properties
 
         // Start with understanding what kind of component it is
         if (ct) {
@@ -282,8 +282,8 @@ export default (em?: EditorModel, config: ParserConfig = {}) => {
      */
     parse(str: string, parserCss: any, opts: HTMLParserOptions = {}) {
       const conf = em?.get('Config') || {};
-      const res: HTMLParseResult = { html: null, css: null };
-      const cf: AnyObject = { ...config, ...opts };
+      const res: HTMLParseResult = {};
+      const cf: ObjectAny = { ...config, ...opts };
       const options = {
         ...config.optionsHtml,
         // @ts-ignore Support previous `configParser.htmlType` option
@@ -344,3 +344,5 @@ export default (em?: EditorModel, config: ParserConfig = {}) => {
     },
   };
 };
+
+export default ParserHtml;

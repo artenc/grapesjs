@@ -52,33 +52,39 @@
  * Check the [Pages](/api/pages.html) module.
  *
  * ## Methods
- * @module Editor
+ * @module docsjs.Editor
  */
-import { EventHandler } from 'backbone';
-import { isUndefined } from 'underscore';
 import { IBaseModule } from '../abstract/Module';
-import AssetManager from '../asset_manager';
-import BlockManager from '../block_manager';
-import CanvasModule from '../canvas';
+import AssetManager, { AssetEvent } from '../asset_manager';
+import BlockManager, { BlockEvent } from '../block_manager';
+import CanvasModule, { CanvasEvent } from '../canvas';
 import CodeManagerModule from '../code_manager';
+import CommandsModule, { CommandEvent } from '../commands';
+import { EventHandler } from '../common';
 import CssComposer from '../css_composer';
+import CssRule from '../css_composer/model/CssRule';
+import CssRules from '../css_composer/model/CssRules';
 import DeviceManager from '../device_manager';
-import ComponentManager from '../dom_components';
+import ComponentManager, { ComponentEvent } from '../dom_components';
 import Component from '../dom_components/model/Component';
+import Components from '../dom_components/model/Components';
+import ComponentWrapper from '../dom_components/model/ComponentWrapper';
 import I18nModule from '../i18n';
-import KeymapsModule from '../keymaps';
-import ModalModule from '../modal_dialog';
+import KeymapsModule, { KeymapEvent } from '../keymaps';
+import ModalModule, { ModalEvent } from '../modal_dialog';
 import LayerManager from '../navigator';
 import PageManager from '../pages';
 import PanelManager from '../panels';
 import ParserModule from '../parser';
 import { CustomParserCss } from '../parser/config/config';
-import RichTextEditorModule from '../rich_text_editor';
-import SelectorManager from '../selector_manager';
-import StorageManager from '../storage_manager';
+import RichTextEditorModule, { RichTextEditorEvent } from '../rich_text_editor';
+import SelectorManager, { SelectorEvent } from '../selector_manager';
+import StorageManager, { StorageEvent } from '../storage_manager';
+import { ProjectData } from '../storage_manager/model/IStorage';
+import StyleManager, { StyleManagerEvent } from '../style_manager';
+import TraitManager from '../trait_manager';
 import UndoManagerModule from '../undo_manager';
 import UtilsModule from '../utils';
-import cash from '../utils/cash-dom';
 import html from '../utils/html';
 import defaults, { EditorConfig, EditorConfigKeys } from './config/config';
 import EditorModel from './model/Editor';
@@ -91,12 +97,31 @@ export type ParsedRule = {
   params?: string;
 };
 
+type EditorEvent =
+  | ComponentEvent
+  | BlockEvent
+  | AssetEvent
+  | KeymapEvent
+  | StyleManagerEvent
+  | StorageEvent
+  | CanvasEvent
+  | SelectorEvent
+  | RichTextEditorEvent
+  | ModalEvent
+  | CommandEvent
+  | GeneralEvent
+  | string;
+
+type GeneralEvent = 'canvasScroll' | 'undo' | 'redo' | 'load' | 'update';
+
 type EditorConfigType = EditorConfig & { pStylePrefix?: string };
 
-export default class EditorModule implements IBaseModule<EditorConfig> {
+type EditorModelParam<T extends keyof EditorModel, N extends number> = Parameters<EditorModel[T]>[N];
+
+export default class Editor implements IBaseModule<EditorConfig> {
   editorView?: EditorView;
   editor: EditorModel;
-  $: typeof cash;
+  $: any;
   em: EditorModel;
   config: EditorConfigType;
 
@@ -118,105 +143,104 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
     return this.em.config;
   }
   get I18n(): I18nModule {
-    return this.em.get('I18n');
+    return this.em.I18n;
   }
   get Utils(): UtilsModule {
-    return this.em.get('Utils');
+    return this.em.Utils;
   }
-  //@ts-ignore
   get Commands(): CommandsModule {
-    return this.em.get('Commands');
+    return this.em.Commands;
   }
   get Keymaps(): KeymapsModule {
-    return this.em.get('Keymaps');
+    return this.em.Keymaps;
   }
   get Modal(): ModalModule {
-    return this.em.get('Modal');
+    return this.em.Modal;
   }
   get Panels(): PanelManager {
-    return this.em.get('Panels');
+    return this.em.Panels;
   }
   get Canvas(): CanvasModule {
-    return this.em.get('Canvas');
+    return this.em.Canvas;
   }
   get Parser(): ParserModule {
-    return this.em.get('Parser');
+    return this.em.Parser;
   }
   get CodeManager(): CodeManagerModule {
-    return this.em.get('CodeManager');
+    return this.em.CodeManager;
   }
   get UndoManager(): UndoManagerModule {
-    return this.em.get('UndoManager');
+    return this.em.UndoManager;
   }
   get RichTextEditor(): RichTextEditorModule {
-    return this.em.get('RichTextEditor');
+    return this.em.RichTextEditor;
   }
   get Pages(): PageManager {
-    return this.em.get('PageManager');
+    return this.em.Pages;
   }
   get Components(): ComponentManager {
-    return this.em.get('DomComponents');
+    return this.em.Components;
   }
   get DomComponents(): ComponentManager {
-    return this.em.get('DomComponents');
+    return this.em.Components;
   }
   get Layers(): LayerManager {
-    return this.em.get('LayerManager');
+    return this.em.Layers;
   }
   get LayerManager(): LayerManager {
-    return this.em.get('LayerManager');
+    return this.em.Layers;
   }
   get Css(): CssComposer {
-    return this.em.get('CssComposer');
+    return this.em.Css;
   }
   get CssComposer(): CssComposer {
-    return this.em.get('CssComposer');
+    return this.em.Css;
   }
   get Storage(): StorageManager {
-    return this.em.get('StorageManager');
+    return this.em.Storage;
   }
   get StorageManager(): StorageManager {
-    return this.em.get('StorageManager');
+    return this.em.Storage;
   }
   get Assets(): AssetManager {
-    return this.em.get('AssetManager');
+    return this.em.Assets;
   }
   get AssetManager(): AssetManager {
-    return this.em.get('AssetManager');
+    return this.em.Assets;
   }
   get Blocks(): BlockManager {
-    return this.em.get('BlockManager');
+    return this.em.Blocks;
   }
   get BlockManager(): BlockManager {
-    return this.em.get('BlockManager');
+    return this.em.Blocks;
   }
-  //@ts-ignore
-  get Traits(): TraitManagerModule {
-    return this.em.get('TraitManager');
+  get Traits(): TraitManager {
+    return this.em.Traits;
   }
-  //@ts-ignore
-  get TraitManager(): TraitManagerModule {
-    return this.em.get('TraitManager');
+  get TraitManager(): TraitManager {
+    return this.em.Traits;
   }
   get Selectors(): SelectorManager {
-    return this.em.get('SelectorManager');
+    return this.em.Selectors;
   }
   get SelectorManager(): SelectorManager {
-    return this.em.get('SelectorManager');
+    return this.em.Selectors;
   }
-  //@ts-ignore
-  get Styles(): StyleManagerModule {
-    return this.em.get('StyleManager');
+  get Styles(): StyleManager {
+    return this.em.Styles;
   }
-  //@ts-ignore
-  get StyleManager(): StyleManagerModule {
-    return this.em.get('StyleManager');
+  get StyleManager(): StyleManager {
+    return this.em.Styles;
   }
   get Devices(): DeviceManager {
-    return this.em.get('DeviceManager');
+    return this.em.Devices;
   }
   get DeviceManager(): DeviceManager {
-    return this.em.get('DeviceManager');
+    return this.em.Devices;
+  }
+
+  get EditorModel() {
+    return this.em;
   }
 
   /**
@@ -237,7 +261,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @param {Boolean} [opts.cleanId=false] Remove unnecessary IDs (eg. those created automatically)
    * @returns {string} HTML string
    */
-  getHtml(opts: any) {
+  getHtml(opts?: EditorModelParam<'getHtml', 0>) {
     return this.em.getHtml(opts);
   }
 
@@ -251,7 +275,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @param {Boolean} [opts.keepUnusedStyles=false] Force keep all defined rules. Toggle on in case output looks different inside/outside of the editor.
    * @returns {String|Array<CssRule>} CSS string or array of CssRules
    */
-  getCss(opts: any) {
+  getCss(opts?: EditorModelParam<'getCss', 0>) {
     return this.em.getCss(opts);
   }
 
@@ -261,7 +285,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @param {Component} [opts.component] Get the JS of a specific component
    * @returns {String} JS string
    */
-  getJs(opts: any) {
+  getJs(opts?: EditorModelParam<'getJs', 0>) {
     return this.em.getJs(opts);
   }
 
@@ -269,16 +293,16 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * Return the complete tree of components. Use `getWrapper` to include also the wrapper
    * @return {Components}
    */
-  getComponents() {
-    return this.em.get('DomComponents').getComponents();
+  getComponents(): Components {
+    return this.Components.getComponents();
   }
 
   /**
    * Return the wrapper and its all components
    * @return {Component}
    */
-  getWrapper() {
-    return this.em.get('DomComponents').getWrapper();
+  getWrapper(): ComponentWrapper | undefined {
+    return this.Components.getWrapper();
   }
 
   /**
@@ -295,7 +319,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    *   content: 'New component'
    * });
    */
-  setComponents(components: any, opt = {}) {
+  setComponents(components: any, opt: any = {}) {
     this.em.setComponents(components, opt);
     return this;
   }
@@ -317,16 +341,16 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    *   content: 'New component'
    * });
    */
-  addComponents(components: any, opts: any) {
-    return this.getWrapper().append(components, opts);
+  addComponents(components: any, opts?: any): Component[] {
+    return this.getWrapper()!.append(components, opts);
   }
 
   /**
    * Returns style in JSON format object
    * @return {Object}
    */
-  getStyle() {
-    return this.em.get('CssComposer').getAll();
+  getStyle(): CssRules {
+    return this.em.Css.getAll();
   }
 
   /**
@@ -341,7 +365,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    *   style: { color: 'red' }
    * });
    */
-  setStyle(style: any, opt = {}) {
+  setStyle(style: any, opt: any = {}) {
     this.em.setStyle(style, opt);
     return this;
   }
@@ -353,7 +377,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @example
    * editor.addStyle('.cls{color: red}');
    */
-  addStyle(style: any, opts = {}) {
+  addStyle(style: any, opts = {}): CssRule[] {
     return this.em.addStyle(style, opts);
   }
 
@@ -401,7 +425,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    *  editor.select(model);
    * });
    */
-  select(el?: Component | Component[], opts?: any) {
+  select(el?: EditorModelParam<'setSelected', 0>, opts?: { scroll?: boolean }) {
     this.em.setSelected(el, opts);
     return this;
   }
@@ -413,7 +437,8 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @example
    * editor.selectAdd(model);
    */
-  selectAdd(el: any) {
+  // selectAdd(el: Parameters<EditorModel['addSelected']>[0]) {
+  selectAdd(el: EditorModelParam<'addSelected', 0>) {
     this.em.addSelected(el);
     return this;
   }
@@ -425,7 +450,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @example
    * editor.selectRemove(model);
    */
-  selectRemove(el: any) {
+  selectRemove(el: EditorModelParam<'removeSelected', 0>) {
     this.em.removeSelected(el);
     return this;
   }
@@ -437,7 +462,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @example
    * editor.selectToggle(model);
    */
-  selectToggle(el: any) {
+  selectToggle(el: EditorModelParam<'toggleSelected', 0>) {
     this.em.toggleSelected(el);
     return this;
   }
@@ -476,7 +501,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * console.log(device);
    * // 'Tablet'
    */
-  getDevice() {
+  getDevice(): string {
     return this.em.get('device');
   }
 
@@ -489,7 +514,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * editor.runCommand('myCommand', {someValue: 1});
    */
   runCommand(id: string, options: Record<string, unknown> = {}) {
-    return this.em.get('Commands').run(id, options);
+    return this.Commands.run(id, options);
   }
 
   /**
@@ -501,7 +526,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * editor.stopCommand('myCommand', {someValue: 1});
    */
   stopCommand(id: string, options: Record<string, unknown> = {}) {
-    return this.em.get('Commands').stop(id, options);
+    return this.Commands.stop(id, options);
   }
 
   /**
@@ -544,7 +569,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @example
    * editor.loadProjectData({ pages: [...], styles: [...], ... })
    */
-  loadProjectData(data: any) {
+  loadProjectData(data: ProjectData) {
     return this.em.loadData(data);
   }
 
@@ -590,7 +615,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @param {Object} [options] Options
    * @param {Boolean} [options.tools=false] Update the position of tools (eg. rich text editor, component highlighter, etc.)
    */
-  refresh(opts?: any) {
+  refresh(opts?: { tools?: boolean }) {
     this.em.refreshCanvas(opts);
   }
 
@@ -677,7 +702,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * // options, as arguments, eg:
    * // editor.on('log:info', (msg, opts) => console.info(msg, opts))
    */
-  log(msg: string, opts = {}) {
+  log(msg: string, opts: { ns?: string; level?: string } = {}) {
     this.em.log(msg, opts);
     return this;
   }
@@ -706,7 +731,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @param  {Function} callback Callback function
    * @return {this}
    */
-  on(event: string, callback: EventHandler) {
+  on(event: EditorEvent, callback: EventHandler) {
     this.em.on(event, callback);
     return this;
   }
@@ -717,7 +742,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @param  {Function} callback Callback function
    * @return {this}
    */
-  once(event: string, callback: EventHandler) {
+  once(event: EditorEvent, callback: EventHandler) {
     this.em.once(event, callback);
     return this;
   }
@@ -728,7 +753,7 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @param  {Function} callback Callback function
    * @return {this}
    */
-  off(event: string, callback: EventHandler) {
+  off(event: EditorEvent, callback: EventHandler) {
     this.em.off(event, callback);
     return this;
   }
@@ -738,8 +763,8 @@ export default class EditorModule implements IBaseModule<EditorConfig> {
    * @param  {string} event Event to trigger
    * @return {this}
    */
-  trigger(eventName: string, ...args: any[]) {
-    this.em.trigger.apply(this.em, [eventName, ...args]);
+  trigger(event: EditorEvent, ...args: any[]) {
+    this.em.trigger.apply(this.em, [event, ...args]);
     return this;
   }
 

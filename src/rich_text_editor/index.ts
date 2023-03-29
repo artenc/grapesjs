@@ -44,6 +44,8 @@ import EditorModel from '../editor/model/Editor';
 import { removeEl } from '../utils/dom';
 import ComponentView from '../dom_components/view/ComponentView';
 
+export type RichTextEditorEvent = 'rte:enable' | 'rte:disable';
+
 const eventsUp = 'change:canvasOffset frame:scroll component:update';
 
 export interface CustomRTE<T = any> {
@@ -61,9 +63,12 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
   actions?: (RichTextEditorAction | string)[];
   customRte?: CustomRTE;
 
-  getConfig() {
-    return this.config;
-  }
+  /**
+   * Get configuration object
+   * @name getConfig
+   * @function
+   * @return {Object}
+   */
 
   constructor(em: EditorModel) {
     super(em, 'RichTextEditor', defaults);
@@ -275,7 +280,7 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
   updatePosition() {
     const { em, toolbar } = this;
     const un = 'px';
-    const canvas = em.get('Canvas');
+    const canvas = em.Canvas;
     const { style } = toolbar;
     const pos = canvas.getTargetToElementFixed(this.lastEl, toolbar, {
       event: 'rteToolbarPosUpdate',
@@ -324,7 +329,7 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
    * @param {Object} rte The instance of already defined RTE
    * @private
    * */
-  disable(view: ComponentView, rte: RichTextEditor) {
+  disable(view: ComponentView, rte?: RichTextEditor) {
     const { em } = this;
     const customRte = this.customRte;
     // @ts-ignore

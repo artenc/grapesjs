@@ -50,7 +50,20 @@ import defaults, { AssetManagerConfig } from './config/config';
 import Asset from './model/Asset';
 import Assets from './model/Assets';
 import AssetsView from './view/AssetsView';
-import FileUpload from './view/FileUploader';
+import FileUploaderView from './view/FileUploader';
+
+export type AssetEvent =
+  | 'asset'
+  | 'asset:open'
+  | 'asset:close'
+  | 'asset:add'
+  | 'asset:remove'
+  | 'asset:update'
+  | 'asset:custom'
+  | 'asset:upload:start'
+  | 'asset:upload:end'
+  | 'asset:upload:error'
+  | 'asset:upload:response';
 
 export const evAll = 'asset';
 export const evPfx = `${evAll}:`;
@@ -87,13 +100,20 @@ const events = {
 // TODO
 type AssetProps = Record<string, any>;
 
+type OpenOptions = {
+  select?: (asset: Asset, complete: boolean) => void;
+  types?: string[];
+  accept?: string;
+  target?: any;
+};
+
 export default class AssetManager extends ItemManagerModule<AssetManagerConfig, Assets> {
   storageKey = 'assets';
   Asset = Asset;
   Assets = Assets;
   assetsVis: Assets;
   am?: AssetsView;
-  fu?: FileUpload;
+  fu?: FileUploaderView;
   _bhv?: any;
 
   /**
@@ -129,7 +149,9 @@ export default class AssetManager extends ItemManagerModule<AssetManagerConfig, 
 
   __trgCustom() {
     const bhv = this.__getBehaviour();
-    if (!bhv.container && !this.getConfig().custom.open) {
+    const custom = this.getConfig().custom;
+
+    if (!bhv.container && !(custom as any).open) {
       return;
     }
     this.em.trigger(this.events.custom, this.__customData());
@@ -138,7 +160,7 @@ export default class AssetManager extends ItemManagerModule<AssetManagerConfig, 
   __customData() {
     const bhv = this.__getBehaviour();
     return {
-      am: this,
+      am: this as AssetManager,
       open: this.isOpen(),
       assets: this.getAll().models,
       types: bhv.types || [],
@@ -174,8 +196,8 @@ export default class AssetManager extends ItemManagerModule<AssetManagerConfig, 
    * // with your custom types (you should have assets with those types declared)
    * assetManager.open({ types: ['doc'], ... });
    */
-  open(options = {}) {
-    const cmd = this.em.get('Commands');
+  open(options: OpenOptions = {}) {
+    const cmd = this.em.Commands;
     cmd.run(assetCmd, {
       types: ['image'],
       select: () => {},
@@ -189,7 +211,7 @@ export default class AssetManager extends ItemManagerModule<AssetManagerConfig, 
    * assetManager.close();
    */
   close() {
-    const cmd = this.em.get('Commands');
+    const cmd = this.em.Commands;
     cmd.stop(assetCmd);
   }
 
@@ -200,7 +222,7 @@ export default class AssetManager extends ItemManagerModule<AssetManagerConfig, 
    * assetManager.isOpen(); // true | false
    */
   isOpen() {
-    const cmd = this.em.get('Commands');
+    const cmd = this.em.Commands;
     return !!cmd?.isActive(assetCmd);
   }
 
@@ -247,7 +269,6 @@ export default class AssetManager extends ItemManagerModule<AssetManagerConfig, 
    * Return the global collection, containing all the assets
    * @returns {Collection<[Asset]>}
    */
-  // @ts-ignore
   getAll() {
     return this.all;
   }
@@ -335,7 +356,7 @@ export default class AssetManager extends ItemManagerModule<AssetManagerConfig, 
       collection: this.assetsVis, // Collection visible in asset manager
       globalCollection: this.all,
       config: this.config,
-      module: this,
+      module: this as AssetManager,
       fu: undefined as any,
     };
   }
@@ -386,7 +407,7 @@ export default class AssetManager extends ItemManagerModule<AssetManagerConfig, 
 
   FileUploader() {
     if (!this.fu) {
-      this.fu = new FileUpload(this.__viewParams());
+      this.fu = new FileUploaderView(this.__viewParams());
     }
     return this.fu;
   }

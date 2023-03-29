@@ -29,10 +29,10 @@ export default class CssRules extends Collection<CssRule> {
   onRemove(removed: CssRule) {
     const em = this.editor;
     em.stopListening(removed);
-    em.get('UndoManager').remove(removed);
+    em.UndoManager.remove(removed);
   }
 
-  // @ts-ignore
+  /** @ts-ignore */
   add(models: any, opt: any = {}) {
     if (typeof models === 'string') {
       models = this.editor.get('Parser').parseCss(models);

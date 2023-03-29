@@ -34,7 +34,7 @@ export interface IStorableModule extends IModule {
 
 export default abstract class Module<T extends ModuleConfig = ModuleConfig> implements IModule<T> {
   private _em: EditorModel;
-  private _config: T;
+  private _config: T & { pStylePrefix?: string };
   private _name: string;
   cls: any[] = [];
   events: any;
@@ -68,14 +68,16 @@ export default abstract class Module<T extends ModuleConfig = ModuleConfig> impl
   onLoad?(): void;
   init(cfg: T) {}
   abstract destroy(): void;
-  render(): HTMLElement | JQuery<HTMLElement> | void {}
+  render(opts?: any): HTMLElement | JQuery<HTMLElement> | void {}
   postLoad(key: any): void {}
 
   get name(): string {
     return this._name;
   }
 
-  getConfig(name?: string) {
+  getConfig<P extends keyof T | undefined = undefined, R = P extends keyof T ? T[P] : T>(
+    name?: P
+  ): R & { pStylePrefix?: string } {
     // @ts-ignore
     return name ? this.config[name] : this.config;
   }
@@ -96,7 +98,7 @@ export default abstract class Module<T extends ModuleConfig = ModuleConfig> impl
     if (elTo) {
       const el = isElement(elTo) ? elTo : document.querySelector(elTo);
       if (!el) return this.__logWarn('"appendTo" element not found');
-      el.appendChild(this.render());
+      el.appendChild(this.render() as any);
     }
   }
 }
@@ -109,11 +111,18 @@ export abstract class ItemManagerModule<
   protected all: TCollection;
   view?: View;
 
-  constructor(em: EditorModel, moduleName: string, all: any, events?: any, defaults?: TConf) {
+  constructor(
+    em: EditorModel,
+    moduleName: string,
+    all: any,
+    events?: any,
+    defaults?: TConf,
+    opts: { skipListen?: boolean } = {}
+  ) {
     super(em, moduleName, defaults);
     this.all = all;
     this.events = events;
-    this.__initListen();
+    !opts.skipListen && this.__initListen();
   }
 
   private: boolean = false;
@@ -121,8 +130,7 @@ export abstract class ItemManagerModule<
   abstract storageKey: string;
   abstract destroy(): void;
   postLoad(key: any): void {}
-  // @ts-ignore
-  render() {}
+  render(opts?: any) {}
 
   getProjectData(data?: any) {
     const obj: any = {};
@@ -165,14 +173,15 @@ export abstract class ItemManagerModule<
     return this;
   }
 
-  getAll(): TCollection extends Collection<infer C> ? C[] : unknown[] {
-    return [...this.all.models] as any;
+  // getAll(): TCollection extends Collection<infer C> ? C[] : TCollection {
+  getAll() {
+    return [...this.all.models] as TCollection | any;
   }
 
   getAllMap(): {
     [key: string]: TCollection extends Collection<infer C> ? C : unknown;
   } {
-    return this.getAll().reduce((acc, i) => {
+    return this.getAll().reduce((acc: any, i: any) => {
       acc[i.get(i.idAttribute)] = i;
       return acc;
     }, {} as any);

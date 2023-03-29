@@ -1,4 +1,5 @@
 import { isString, isObject, bindAll } from 'underscore';
+import BlockManager from '..';
 import { View } from '../../common';
 import Component from '../../dom_components/model/Component';
 import EditorModel from '../../editor/model/Editor';
@@ -49,7 +50,7 @@ export default class BlocksView extends View {
     }
   }
 
-  __getModule() {
+  __getModule(): BlockManager {
     return this.em.Blocks;
   }
 
@@ -69,10 +70,11 @@ export default class BlocksView extends View {
     if (!em) return;
 
     if (!this.sorter) {
-      const utils = em.get('Utils');
-      const canvas = em.get('Canvas');
+      const utils = em.Utils;
+      const canvas = em.Canvas;
 
       this.sorter = new utils.Sorter({
+        // @ts-ignore
         container: canvas.getBody(),
         placer: canvas.getPlacerEl(),
         containerSel: '*',

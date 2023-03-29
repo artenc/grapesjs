@@ -138,8 +138,8 @@ const normalizeFloat = (value: any, step = 1, valueDef = 0) => {
   return stepDecimals ? parseFloat(value.toFixed(stepDecimals)) : value;
 };
 
-const hasDnd = (em: any) => {
-  return 'draggable' in document.createElement('i') && (em ? em.get('Config').nativeDnD : 1);
+const hasDnd = (em: EditorModel) => {
+  return 'draggable' in document.createElement('i') && (em ? em.config.nativeDnD! : true);
 };
 
 /**
@@ -275,7 +275,7 @@ const isEnterKey = (ev: KeyboardEvent) => getKeyCode(ev) === 13;
 const isObject = (val: any): val is Object => val !== null && !Array.isArray(val) && typeof val === 'object';
 const isEmptyObj = (val: Record<string, any>) => Object.keys(val).length <= 0;
 
-const capitalize = (str: string) => str && str.charAt(0).toUpperCase() + str.substring(1);
+const capitalize = (str: string = '') => str && str.charAt(0).toUpperCase() + str.substring(1);
 const isComponent = (obj: any) => obj && obj.toHTML;
 const isRule = (obj: any) => obj && obj.toCSS;
 

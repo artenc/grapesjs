@@ -55,6 +55,14 @@ import { ItemManagerModule } from '../abstract/Module';
 import EditorModel from '../editor/model/Editor';
 import Component from '../dom_components/model/Component';
 
+export type BlockEvent =
+  | 'block:add'
+  | 'block:remove'
+  | 'block:drag:start'
+  | 'block:drag'
+  | 'block:drag:stop'
+  | 'block:custom';
+
 export const evAll = 'block';
 export const evPfx = `${evAll}:`;
 export const evAdd = `${evPfx}add`;
@@ -112,6 +120,13 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
     return this;
   }
 
+  /**
+   * Get configuration object
+   * @name getConfig
+   * @function
+   * @return {Object}
+   */
+
   __trgCustom() {
     this.em.trigger(this.events.custom, this.__customData());
   }
@@ -119,7 +134,7 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
   __customData() {
     const bhv = this.__getBehaviour();
     return {
-      bm: this,
+      bm: this as BlockManager,
       blocks: this.getAll().models,
       container: bhv.container,
       dragStart: (block: Block, ev: Event) => this.startDrag(block, ev),
@@ -204,14 +219,6 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
     this.__endDrag();
   }
 
-  /**
-   * Get configuration object
-   * @return {Object}
-   */
-  getConfig() {
-    return this.config;
-  }
-
   postRender() {
     const { categories, config, em } = this;
     const collection = this.blocksVisible;
@@ -262,7 +269,6 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
    * console.log(JSON.stringify(blocks));
    * // [{label: 'Heading', content: '<h1>Put your ...'}, ...]
    */
-  // @ts-ignore
   getAll() {
     return this.blocks;
   }
@@ -334,7 +340,6 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
    * const newBlocksEl = blockManager.render(filtered, { external: true });
    * document.getElementById('some-id').appendChild(newBlocksEl);
    */
-  // @ts-ignore
   render(blocks: Block[], opts: { external?: boolean } = {}) {
     const { categories, config, em } = this;
     const toRender = blocks || this.getAll().models;

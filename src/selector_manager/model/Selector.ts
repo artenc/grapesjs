@@ -5,6 +5,15 @@ import EditorModel from '../../editor/model/Editor';
 const TYPE_CLASS = 1;
 const TYPE_ID = 2;
 
+export interface SelectorProps {
+  name: string;
+  label?: string;
+  type?: number;
+  active?: boolean;
+  private?: boolean;
+  protected?: boolean;
+}
+
 /**
  * @typedef Selector
  * @property {String} name Selector name, eg. `my-class`
@@ -55,9 +64,7 @@ export default class Selector extends Model {
 
     const namePreEsc = this.get('name');
     const { escapeName } = config;
-    const nameEsc = escapeName
-      ? escapeName(namePreEsc)
-      : Selector.escapeName(namePreEsc);
+    const nameEsc = escapeName ? escapeName(namePreEsc) : Selector.escapeName(namePreEsc);
     this.set('name', nameEsc);
     this.em = opts.em;
   }
@@ -177,7 +184,7 @@ export default class Selector extends Model {
    * @private
    */
   static escapeName(name: string) {
-    return `${name}`.trim().replace(/([^a-z0-9\w-\:]+)/gi, '-');
+    return `${name}`.trim().replace(/([^a-z0-9\w-\:@]+)/gi, '-');
   }
 }
 

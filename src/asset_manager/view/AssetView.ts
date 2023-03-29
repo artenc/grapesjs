@@ -1,11 +1,11 @@
-import { View } from '../../common';
+import { View, ViewOptions } from '../../common';
 import Asset from '../model/Asset';
 import Assets from '../model/Assets';
 import { AssetManagerConfig } from '../config/config';
 import { clone } from 'underscore';
 import EditorModel from '../../editor/model/Editor';
 
-export type AssetViewProps = Backbone.ViewOptions<Asset> & {
+export type AssetViewProps = ViewOptions<Asset> & {
   collection: Assets;
   config: AssetManagerConfig;
 };
@@ -39,8 +39,8 @@ export default class AssetView<TModel extends Asset = Asset> extends View<TModel
 
   __getBhv() {
     const { em } = this;
-    const am = em && em.get('AssetManager');
-    return (am && am.__getBehaviour()) || {};
+    const am = em?.Assets;
+    return am?.__getBehaviour() || {};
   }
 
   template(view: AssetView, asset: Asset) {

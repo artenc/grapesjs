@@ -1,20 +1,19 @@
 import { bindAll, isString, debounce, isUndefined } from 'underscore';
 import { appendVNodes, append, createEl, createCustomEvent, motionsEv } from '../../utils/dom';
 import { on, off, setViewEl, hasDnd, getPointerEvent } from '../../utils/mixins';
-import { View } from '../../abstract';
+import { ModuleView } from '../../abstract';
 import CssRulesView from '../../css_composer/view/CssRulesView';
 import Droppable from '../../utils/Droppable';
 import Frame from '../model/Frame';
 import Canvas from '../model/Canvas';
-import ComponentWrapper from '../../dom_components/model/ComponentWrapper';
 import FrameWrapView from './FrameWrapView';
 
-export default class FrameView extends View<Frame, HTMLIFrameElement> {
-  //@ts-ignore
+export default class FrameView extends ModuleView<Frame, HTMLIFrameElement> {
+  /** @ts-ignore */
   get tagName() {
     return 'iframe';
   }
-  //@ts-ignore
+  /** @ts-ignore */
   get attributes() {
     return { allowfullscreen: 'allowfullscreen' };
   }
@@ -88,7 +87,7 @@ export default class FrameView extends View<Frame, HTMLIFrameElement> {
   }
 
   getCanvasModel(): Canvas {
-    return this.em.get('Canvas').getModel();
+    return this.em.Canvas.getModel();
   }
 
   getWindow() {
@@ -124,7 +123,7 @@ export default class FrameView extends View<Frame, HTMLIFrameElement> {
   }
 
   getGlobalToolsEl() {
-    return this.em.get('Canvas').getGlobalToolsEl();
+    return this.em.Canvas.getGlobalToolsEl()!;
   }
 
   getHighlighter() {
@@ -184,7 +183,7 @@ export default class FrameView extends View<Frame, HTMLIFrameElement> {
     this._toggleEffects(false);
     this.tools = {};
     wrp && wrp.remove();
-    View.prototype.remove.apply(this, args);
+    ModuleView.prototype.remove.apply(this, args);
     return this;
   }
 
@@ -202,11 +201,11 @@ export default class FrameView extends View<Frame, HTMLIFrameElement> {
   autoscroll() {
     if (this.dragging) {
       const { lastClientY } = this;
-      const canvas = this.em.get('Canvas');
+      const canvas = this.em.Canvas;
       const win = this.getWindow();
       const actualTop = win.pageYOffset;
       const clientY = lastClientY || 0;
-      const limitTop = canvas.getConfig().autoscrollLimit;
+      const limitTop = canvas.getConfig().autoscrollLimit!;
       const limitBottom = this.getRect().height - limitTop;
       let nextTop = actualTop;
 
@@ -225,7 +224,7 @@ export default class FrameView extends View<Frame, HTMLIFrameElement> {
         nextTop < this.lastMaxHeight
       ) {
         const toolsEl = this.getGlobalToolsEl();
-        toolsEl.style.opacity = 0;
+        toolsEl.style.opacity = '0';
         this.showGlobalTools();
         win.scrollTo(0, nextTop);
       }
@@ -409,7 +408,7 @@ export default class FrameView extends View<Frame, HTMLIFrameElement> {
     </style>`
     );
     const component = model.getComponent();
-    const { view } = em.get('DomComponents').getType('wrapper');
+    const { view } = em.Components.getType('wrapper')!;
     this.wrapper = new view({
       model: component,
       config: {
@@ -425,7 +424,7 @@ export default class FrameView extends View<Frame, HTMLIFrameElement> {
         collection: model.getStyles(),
         //@ts-ignore
         config: {
-          ...em.get('CssComposer').getConfig(),
+          ...em.Css.getConfig(),
           frameView: this,
         },
       }).render().el
@@ -453,7 +452,9 @@ export default class FrameView extends View<Frame, HTMLIFrameElement> {
     );
 
     this._toggleEffects(true);
-    this.droppable = hasDnd(em) && new Droppable(em, this.wrapper?.el);
+    if (hasDnd(em)) {
+      this.droppable = new Droppable(em, this.wrapper?.el);
+    }
     model.trigger('loaded');
   }
 

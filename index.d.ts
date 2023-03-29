@@ -34,6 +34,8 @@ declare namespace Backbone {
 
 declare namespace grapesjs {
   type PluginOptions = Record<string, any>;
+  type AnyObject = Record<string, any>;
+
 
   type Plugin<T extends PluginOptions = {}> = (editor: Editor, config: T) => void;
 
@@ -66,7 +68,7 @@ declare namespace grapesjs {
     fromElement?: boolean;
 
     /** Show an alert before unload the page with unsaved changes */
-    noticeOnUnload?: number;
+    noticeOnUnload?: number | boolean;
 
     /** Show paddings and margins */
     showOffsets?: boolean;
@@ -263,6 +265,11 @@ declare namespace grapesjs {
     layerManager?: LayerManagerConfig;
 
     parser?: ParserConfig;
+    /**
+       * Color picker options.
+       */
+    colorPicker?: AnyObject;
+    pStylePrefix?: string;
   }
 
   interface AssetManagerConfig {
@@ -418,11 +425,13 @@ declare namespace grapesjs {
     showComputed?: boolean;
     clearProperties?: boolean;
     avoidComputed?: Array<string>;
+    custom?: boolean;
   }
 
   interface BlockManagerConfig {
     appendTo?: HTMLElement | string;
     blocks: Array<object>;
+    custom?: boolean;
   }
 
   interface RichTextEditorConfig {
@@ -1302,7 +1311,8 @@ declare namespace grapesjs {
     | 'block:remove'
     | 'block:drag:start'
     | 'block:drag'
-    | 'block:drag:stop';
+    | 'block:drag:stop'
+    | 'block:custom';
 
   type AssetEvent =
     | 'asset:add'

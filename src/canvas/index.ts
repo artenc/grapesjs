@@ -57,6 +57,8 @@ import Frame from './model/Frame';
 import CanvasView from './view/CanvasView';
 import FrameView from './view/FrameView';
 
+export type CanvasEvent = 'canvas:dragenter' | 'canvas:dragover' | 'canvas:drop' | 'canvas:dragend' | 'canvas:dragdata';
+
 export default class CanvasModule extends Module<CanvasConfig> {
   /**
    * Get configuration object
@@ -176,7 +178,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
    * @returns {HTMLElement}
    * @private
    */
-  getToolsEl(compView: any) {
+  getToolsEl(compView?: any) {
     return this._getLocalEl(this.getCanvasView().toolsEl, compView, 'getToolsEl');
   }
 
@@ -185,7 +187,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
    * @returns {HTMLElement}
    * @private
    */
-  getHighlighter(compView: any) {
+  getHighlighter(compView?: any) {
     return this._getLocalEl(this.getCanvasView().hlEl, compView, 'getHighlighter');
   }
 

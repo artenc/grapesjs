@@ -12,9 +12,16 @@ import { PanelsConfig } from '../../panels/config/config';
 import { ParserConfig } from '../../parser/config/config';
 import { RichTextEditorConfig } from '../../rich_text_editor/config/config';
 import { SelectorManagerConfig } from '../../selector_manager/config/config';
+import { StorageManagerConfig } from '../../storage_manager/config/config';
 import { UndoManagerConfig } from '../../undo_manager/config';
-
-type AnyObject = Record<string, any>;
+import { Plugin } from '../../plugin_manager';
+import { TraitManagerConfig } from '../../trait_manager/config/config';
+import { CommandsConfig } from '../../commands/config/config';
+import { StyleManagerConfig } from '../../style_manager/config/config';
+import { DomComponentsConfig } from '../../dom_components/config/config';
+import { HTMLGeneratorBuildOptions } from '../../code_manager/model/HtmlGenerator';
+import { CssGeneratorBuildOptions } from '../../code_manager/model/CssGenerator';
+import { ObjectAny } from '../../common';
 
 export interface EditorConfig {
   /**
@@ -55,7 +62,7 @@ export interface EditorConfig {
   /**
    * Initial project data (JSON containing your components/styles/etc) to load.
    */
-  projectData?: AnyObject;
+  projectData?: ObjectAny;
 
   /**
    * HTML string or object of components
@@ -219,17 +226,17 @@ export interface EditorConfig {
    */
   multipleSelection?: boolean;
 
-  // TODO
   /**
    * Pass default available options wherever `editor.getHtml()` is called.
    * @default {}
    */
-  optsHtml?: Record<string, any>;
+  optsHtml?: HTMLGeneratorBuildOptions;
+
   /**
    * Pass default available options wherever `editor.getCss()` is called
    * @default {}
    */
-  optsCss?: Record<string, any>;
+  optsCss?: CssGeneratorBuildOptions;
 
   /**
    * Usually when you update the `style` of the component this changes the
@@ -291,7 +298,7 @@ export interface EditorConfig {
    * Experimental: don't use.
    * Editor icons
    */
-  icons?: AnyObject;
+  icons?: ObjectAny;
 
   /**
    * Configurations for I18n.
@@ -313,22 +320,20 @@ export interface EditorConfig {
    */
   canvas?: CanvasConfig;
 
-  // TODO
   /**
    * Configurations for Storage Manager.
    */
-  storageManager?: AnyObject | boolean;
+  storageManager?: StorageManagerConfig | boolean;
 
   /**
    * Configurations for Rich Text Editor.
    */
   richTextEditor?: RichTextEditorConfig;
 
-  // TODO
   /**
    * Configurations for DomComponents
    */
-  domComponents?: AnyObject;
+  domComponents?: DomComponentsConfig;
 
   /**
    * Configurations for Modal Dialog.
@@ -345,11 +350,10 @@ export interface EditorConfig {
    */
   panels?: PanelsConfig;
 
-  // TODO
   /**
    * Configurations for Commands.
    */
-  commands?: AnyObject;
+  commands?: CommandsConfig;
 
   /**
    * Configurations for Css Composer.
@@ -366,22 +370,20 @@ export interface EditorConfig {
    */
   deviceManager?: DeviceManagerConfig;
 
-  // TODO
   /**
    * Configurations for Style Manager.
    */
-  styleManager?: AnyObject;
+  styleManager?: StyleManagerConfig;
 
   /**
    * Configurations for Block Manager.
    */
   blockManager?: BlockManagerConfig;
 
-  // TODO
   /**
    * Configurations for Trait Manager.
    */
-  traitManager?: AnyObject;
+  traitManager?: TraitManagerConfig;
 
   /**
    * Configurations for Page Manager.
@@ -417,7 +419,7 @@ export interface EditorConfig {
   /**
    * Color picker options.
    */
-  colorPicker?: AnyObject;
+  colorPicker?: ObjectAny;
   pStylePrefix?: string;
 }
 

@@ -14,15 +14,29 @@ export const getMediaLength = (mediaQuery: string) => {
   return !length ? '' : length[0];
 };
 
-type CssGeneratorBuildOptions = {
+export type CssGeneratorBuildOptions = {
+  /**
+   * Return an array of CssRules instead of the CSS string.
+   */
   json?: boolean;
+
+  /**
+   * Return only rules matched by the passed component.
+   */
+  onlyMatched?: boolean;
+
+  /**
+   * Force keep all defined rules. Toggle on in case output looks different inside/outside of the editor.
+   */
+  keepUnusedStyles?: boolean;
+  rules?: CssRule[];
+  ruleFilter?: Function;
+  clearStyles?: boolean;
+};
+
+type CssGeneratorBuildOptionsProps = CssGeneratorBuildOptions & {
   em?: EditorModel;
   cssc?: CssComposer;
-  clearStyles?: boolean;
-  onlyMatched?: boolean;
-  keepUnusedStyles?: boolean;
-  rules?: CssRules;
-  ruleFilter?: Function;
 };
 
 type AtRules = Record<string, CssRule[]>;
@@ -50,7 +64,7 @@ export default class CssGenerator extends Model {
     const em = this.em;
     const avoidInline = em && em.getConfig().avoidInlineStyle;
     const style = model.styleToString();
-    const classes = model.get('classes');
+    const classes = model.classes;
     this.ids.push(`#${model.getId()}`);
 
     // Let's know what classes I've found
@@ -65,7 +79,7 @@ export default class CssGenerator extends Model {
     return code;
   }
 
-  build(model: Component, opts: CssGeneratorBuildOptions = {}) {
+  build(model: Component, opts: CssGeneratorBuildOptionsProps = {}) {
     const { json } = opts;
     const em = opts.em;
     const cssc = opts.cssc || em?.Css;
@@ -181,7 +195,7 @@ export default class CssGenerator extends Model {
    * @param {Array<CSSRule>} rules
    * @returns {Array<CSSRule>}
    */
-  matchedRules(component: Component, rules: CssRules) {
+  matchedRules(component: Component, rules: CssRules | CssRule[]) {
     const el = component.getEl();
     let result: CssRule[] = [];
 
@@ -191,7 +205,7 @@ export default class CssGenerator extends Model {
           rule
             .selectorsToString()
             .split(',')
-            .some(selector => el.matches(this.__cleanSelector(selector)))
+            .some(selector => el?.matches(this.__cleanSelector(selector)))
         ) {
           result.push(rule);
         }

@@ -1,11 +1,11 @@
-import { Model } from '../../abstract';
+import { ModuleModel } from '../../abstract';
 import { evPageSelect } from '../../pages';
 import { evUpdate as evDeviceUpdate } from '../../device_manager';
 import Frames from './Frames';
 import Page from '../../pages/model/Page';
 import CanvasModule from '..';
 
-export default class Canvas extends Model<CanvasModule> {
+export default class Canvas extends ModuleModel<CanvasModule> {
   defaults() {
     return {
       frame: '',
@@ -37,7 +37,7 @@ export default class Canvas extends Model<CanvasModule> {
 
   init() {
     const { em } = this;
-    const mainPage = em.get('PageManager').getMain();
+    const mainPage = em.Pages.getMain();
     this.set('frames', mainPage.getFrames());
     this.updateDevice({ frame: mainPage.getMainFrame() });
   }

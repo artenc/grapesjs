@@ -32,12 +32,13 @@ import { isObject } from '../utils/mixins';
 import Selectors from '../selector_manager/model/Selectors';
 import Selector from '../selector_manager/model/Selector';
 import defaults, { CssComposerConfig } from './config/config';
-import CssRule, { CssRuleProperties } from './model/CssRule';
+import CssRule, { CssRuleJSON, CssRuleProperties } from './model/CssRule';
 import CssRules from './model/CssRules';
 import CssRulesView from './view/CssRulesView';
 import { ItemManagerModule } from '../abstract/Module';
 import EditorModel from '../editor/model/Editor';
 import Component from '../dom_components/model/Component';
+import { ObjectAny } from '../common';
 
 type RuleOptions = {
   atRuleType?: string;
@@ -45,7 +46,6 @@ type RuleOptions = {
 };
 
 type CssRuleStyle = Required<CssRuleProperties>['style'];
-type AnyObject = Record<string, any>;
 
 export default class CssComposer extends ItemManagerModule<CssComposerConfig & { pStylePrefix?: string }> {
   rules: CssRules;
@@ -170,15 +170,14 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
   get(selectors: any, state?: string, width?: string, ruleProps?: Omit<CssRuleProperties, 'selectors'>) {
     let slc = selectors;
     if (isString(selectors)) {
-      const sm = this.em.get('SelectorManager');
+      const sm = this.em.Selectors;
       const singleSel = selectors.split(',')[0].trim();
-      const node = this.em.get('Parser').parserCss.checkNode({ selectors: singleSel })[0];
-      slc = sm.get(node.selectors);
+      const node = this.em.Parser.parserCss.checkNode({ selectors: singleSel } as any)[0];
+      slc = sm.get(node.selectors as string[]);
     }
     return this.rules.find(rule => rule.compare(slc, state, width, ruleProps)) || null;
   }
 
-  // @ts-ignore
   getAll() {
     return this.rules;
   }
@@ -192,7 +191,7 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
    * @return {Array<Model>}
    * @private
    */
-  addCollection(data: string | CssRuleProperties[], opts: Record<string, any> = {}, props = {}) {
+  addCollection(data: string | CssRuleJSON[], opts: Record<string, any> = {}, props = {}) {
     const { em } = this;
     const result: CssRule[] = [];
 
@@ -203,7 +202,7 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
     const d = data instanceof Array ? data : [data];
 
     for (var i = 0, l = d.length; i < l; i++) {
-      const rule = (d[i] || {}) as CssRuleProperties;
+      const rule = (d[i] || {}) as CssRuleJSON;
       if (!rule.selectors) continue;
 
       const sm = em?.Selectors;
@@ -271,15 +270,15 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
    * });
    * // output: @media (min-width: 500px) { .class1:hover { color: red } }
    */
-  setRule(selectors: any, style: CssRuleProperties['style'], opts: RuleOptions = {}) {
+  setRule(selectors: any, style: CssRuleProperties['style'] = {}, opts: RuleOptions = {}) {
     const { atRuleType, atRuleParams } = opts;
-    const node = this.em.get('Parser').parserCss.checkNode({
+    const node = this.em.Parser.parserCss.checkNode({
       selectors,
       style,
     })[0];
     const { state, selectorsAdd } = node;
-    const sm = this.em.get('SelectorManager');
-    const selector = sm.add(node.selectors);
+    const sm = this.em.Selectors;
+    const selector = sm.add(node.selectors as any);
     const rule = this.add(selector, state, atRuleParams, {
       selectorsAdd,
       atRule: atRuleType,
@@ -354,11 +353,11 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
    * // #myid { color: red }
    * // #myid:hover { color: blue }
    */
-  setIdRule(name: string, style: CssRuleStyle = {}, opts: AnyObject = {}) {
+  setIdRule(name: string, style: CssRuleStyle = {}, opts: ObjectAny = {}) {
     const { addOpts = {}, mediaText } = opts;
     const state = opts.state || '';
     const media = !isUndefined(mediaText) ? mediaText : this.em.getCurrentMedia();
-    const sm = this.em.get('SelectorManager');
+    const sm = this.em.Selectors;
     const selector = sm.add({ name, type: Selector.TYPE_ID }, addOpts);
     const rule = this.add(selector, state, media, {}, addOpts);
     rule.setStyle(style, { ...opts, ...addOpts });
@@ -375,11 +374,11 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
    * const rule = css.getIdRule('myid');
    * const ruleHover = css.setIdRule('myid', { state: 'hover' });
    */
-  getIdRule(name: string, opts: AnyObject = {}) {
+  getIdRule(name: string, opts: ObjectAny = {}) {
     const { mediaText } = opts;
     const state = opts.state || '';
     const media = !isUndefined(mediaText) ? mediaText : this.em.getCurrentMedia();
-    const selector = this.em.get('SelectorManager').get(name, Selector.TYPE_ID);
+    const selector = this.em.Selectors.get(name, Selector.TYPE_ID);
     return selector && this.get(selector, state, media);
   }
 
@@ -397,10 +396,10 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
    * // .myclass { color: red }
    * // .myclass:hover { color: blue }
    */
-  setClassRule(name: string, style: CssRuleStyle = {}, opts: AnyObject = {}) {
+  setClassRule(name: string, style: CssRuleStyle = {}, opts: ObjectAny = {}) {
     const state = opts.state || '';
     const media = opts.mediaText || this.em.getCurrentMedia();
-    const sm = this.em.get('SelectorManager');
+    const sm = this.em.Selectors;
     const selector = sm.add({ name, type: Selector.TYPE_CLASS });
     const rule = this.add(selector, state, media);
     rule.setStyle(style, opts);
@@ -417,10 +416,10 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
    * const rule = css.getClassRule('myclass');
    * const ruleHover = css.getClassRule('myclass', { state: 'hover' });
    */
-  getClassRule(name: string, opts: AnyObject = {}) {
+  getClassRule(name: string, opts: ObjectAny = {}) {
     const state = opts.state || '';
     const media = opts.mediaText || this.em.getCurrentMedia();
-    const selector = this.em.get('SelectorManager').get(name, Selector.TYPE_CLASS);
+    const selector = this.em.Selectors.get(name, Selector.TYPE_CLASS);
     return selector && this.get(selector, state, media);
   }
 
@@ -435,7 +434,7 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
    * // Remove by selector
    * css.remove('.my-cls-2');
    */
-  remove(rule: string | CSSRule, opts?: any) {
+  remove(rule: string | CssRule, opts?: any) {
     const toRemove = isString(rule) ? this.getRules(rule) : rule;
     const result = this.getAll().remove(toRemove, opts);
     return isArray(result) ? result : [result];
@@ -450,7 +449,7 @@ export default class CssComposer extends ItemManagerModule<CssComposerConfig & {
     return this;
   }
 
-  getComponentRules(cmp: Component, opts: AnyObject = {}) {
+  getComponentRules(cmp: Component, opts: ObjectAny = {}) {
     let { state, mediaText, current } = opts;
     if (current) {
       state = this.em.get('state') || '';

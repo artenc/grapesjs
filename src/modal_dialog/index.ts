@@ -1,5 +1,5 @@
 /**
- * You can customize the initial state of the module from the editor initialization, by passing the following [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/modal_dialog/config/config.js)
+ * You can customize the initial state of the module from the editor initialization, by passing the following [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/modal_dialog/config/config.ts)
  * ```js
  * const editor = grapesjs.init({
  *  modal: {
@@ -33,7 +33,6 @@
  * @module Modal
  */
 
-import { EventHandler } from 'backbone';
 import { debounce, isFunction, isString } from 'underscore';
 import { Module } from '../abstract';
 import EditorView from '../editor/view/EditorView';
@@ -42,6 +41,9 @@ import { createText } from '../utils/dom';
 import defaults, { ModalConfig } from './config/config';
 import ModalM from './model/Modal';
 import ModalView from './view/ModalView';
+import { EventHandler } from '../common';
+
+export type ModalEvent = 'modal:open' | 'modal:close' | 'modal';
 
 export default class ModalModule extends Module<ModalConfig> {
   modal?: ModalView;
@@ -82,7 +84,9 @@ export default class ModalModule extends Module<ModalConfig> {
       title: isString(titl) ? createText(titl) : titl,
       //@ts-ignore
       content: isString(cnt) ? createText(cnt) : cnt.get ? cnt.get(0) : cnt,
-      close: () => this.close(),
+      close: () => {
+        this.close();
+      },
     };
   }
 

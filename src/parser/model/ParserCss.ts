@@ -1,17 +1,17 @@
 import { isString } from 'underscore';
-import { CssRuleProperties } from '../../css_composer/model/CssRule';
+import { CssRuleJSON } from '../../css_composer/model/CssRule';
 import EditorModel from '../../editor/model/Editor';
 import { ParsedCssRule, ParserConfig } from '../config/config';
 import BrowserCssParser, { parseSelector, createNode } from './BrowserParserCss';
 
-export default (em?: EditorModel, config: ParserConfig = {}) => ({
+const ParserCss = (em?: EditorModel, config: ParserConfig = {}) => ({
   /**
    * Parse CSS string to a desired model object
    * @param  {String} str CSS string
    * @return {Array<Object>}
    */
   parse(str: string) {
-    let result: CssRuleProperties[] = [];
+    let result: CssRuleJSON[] = [];
     const { parserCss } = config;
     const editor = em?.Editor;
     const nodes = parserCss ? parserCss(str, editor!) : BrowserCssParser(str);
@@ -26,12 +26,12 @@ export default (em?: EditorModel, config: ParserConfig = {}) => ({
    * a valid object for the CSS composer
    * @return {[type]}
    */
-  checkNode(node: CssRuleProperties | ParsedCssRule): CssRuleProperties[] {
+  checkNode(node: CssRuleJSON | ParsedCssRule): CssRuleJSON[] {
     const { selectors, style } = node;
-    let result = [node] as CssRuleProperties[];
+    let result = [node] as CssRuleJSON[];
 
     if (isString(selectors)) {
-      const nodes: CssRuleProperties[] = [];
+      const nodes: CssRuleJSON[] = [];
       const parsedNode = node as ParsedCssRule;
       const selsParsed = parseSelector(selectors);
       const classSets = selsParsed.result;
@@ -57,3 +57,5 @@ export default (em?: EditorModel, config: ParserConfig = {}) => ({
     return result;
   },
 });
+
+export default ParserCss;

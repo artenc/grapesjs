@@ -46,11 +46,12 @@
 
 import { isString, bindAll, unique, flatten } from 'underscore';
 import { createId } from '../utils/mixins';
-import { Model, Module } from '../abstract';
+import { ModuleModel } from '../abstract';
 import { ItemManagerModule, ModuleConfig } from '../abstract/Module';
 import Pages from './model/Pages';
 import Page from './model/Page';
 import EditorModel from '../editor/model/Editor';
+import ComponentWrapper from '../dom_components/model/ComponentWrapper';
 
 export const evAll = 'page';
 export const evPfx = `${evAll}:`;
@@ -85,7 +86,12 @@ export default class PageManager extends ItemManagerModule<PageManagerConfig, Pa
     return this.all;
   }
 
-  model: Model;
+  model: ModuleModel;
+
+  getAll() {
+    // this avoids issues during the TS build (some getAll are inconsistent)
+    return [...this.all.models];
+  }
 
   /**
    * Get all pages
@@ -104,7 +110,7 @@ export default class PageManager extends ItemManagerModule<PageManagerConfig, Pa
   constructor(em: EditorModel) {
     super(em, 'PageManager', new Pages([], em), events);
     bindAll(this, '_onPageChange');
-    const model = new Model({ _undo: true } as any);
+    const model = new ModuleModel({ _undo: true } as any);
     this.model = model;
     this.pages.on('reset', coll => coll.at(0) && this.select(coll.at(0)));
     this.pages.on('all', this.__onChange, this);
@@ -128,18 +134,19 @@ export default class PageManager extends ItemManagerModule<PageManagerConfig, Pa
 
   _onPageChange(m: any, page: Page, opts: any) {
     const { em } = this;
-    const lm = em.get('LayerManager');
+    const lm = em.Layers;
     const mainComp = page.getMainComponent();
-    lm && mainComp && lm.setRoot(mainComp);
+    lm && mainComp && lm.setRoot(mainComp as any);
     em.trigger(evPageSelect, page, m.previous('selected'));
     this.__onChange(chnSel, page, opts);
   }
 
   postLoad() {
-    const { em, model } = this;
-    const um = em.get('UndoManager');
-    um && um.add(model);
-    um && um.add(this.pages);
+    const { em, model, pages } = this;
+    const um = em.UndoManager;
+    um.add(model);
+    um.add(pages);
+    pages.on('add remove reset change', (m, c, o) => em.changesUp(o || c));
   }
 
   /**
@@ -197,7 +204,7 @@ export default class PageManager extends ItemManagerModule<PageManagerConfig, Pa
    * @example
    * const somePage = pageManager.get('page-id');
    */
-  get(id: string) {
+  get(id: string): Page | undefined {
     return this.pages.filter(p => p.get(p.idAttribute) === id)[0];
   }
 
@@ -220,7 +227,7 @@ export default class PageManager extends ItemManagerModule<PageManagerConfig, Pa
    * // Get all `image` components from the project
    * const allImages = wrappers.map(wrp => wrp.findType('image')).flat();
    */
-  getAllWrappers() {
+  getAllWrappers(): ComponentWrapper[] {
     const pages = this.getAll();
     return unique(flatten(pages.map(page => page.getAllFrames().map(frame => frame.getComponent()))));
   }
@@ -250,7 +257,7 @@ export default class PageManager extends ItemManagerModule<PageManagerConfig, Pa
    * @example
    * const selectedPage = pageManager.getSelected();
    */
-  getSelected() {
+  getSelected(): Page | undefined {
     return this.model.get('selected');
   }
 

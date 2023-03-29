@@ -1,10 +1,10 @@
 import CanvasModule from '..';
-import DomainViews from '../../abstract/DomainViews';
+import ModuleDomainViews from '../../abstract/ModuleDomainViews';
 import Frames from '../model/Frames';
 import CanvasView from './CanvasView';
 import FrameWrapView from './FrameWrapView';
 
-export default class FramesView extends DomainViews<Frames, FrameWrapView> {
+export default class FramesView extends ModuleDomainViews<Frames, FrameWrapView> {
   canvasView: CanvasView;
   private _module: CanvasModule;
 

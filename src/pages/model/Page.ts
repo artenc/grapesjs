@@ -3,6 +3,8 @@ import { Model } from '../../common';
 import Frames from '../../canvas/model/Frames';
 import Frame from '../../canvas/model/Frame';
 import EditorModel from '../../editor/model/Editor';
+import { PageManagerConfig } from '..';
+import ComponentWrapper from '../../dom_components/model/ComponentWrapper';
 
 export default class Page extends Model {
   defaults() {
@@ -13,18 +15,18 @@ export default class Page extends Model {
   }
   em: EditorModel;
 
-  constructor(props: any, opts: any = {}) {
+  constructor(props: any, opts: { em?: EditorModel; config?: PageManagerConfig } = {}) {
     super(props, opts);
     const { em } = opts;
     const defFrame: any = {};
-    this.em = em;
+    this.em = em!;
     if (!props.frames) {
       defFrame.component = props.component;
       defFrame.styles = props.styles;
       ['component', 'styles'].map(i => this.unset(i));
     }
     const frms: any[] = props.frames || [defFrame];
-    const frames = new Frames(em.get('Canvas'), frms);
+    const frames = new Frames(em!.Canvas, frms);
     frames.page = this;
     this.set('frames', frames);
     !this.getId() && this.set('id', em?.get('PageManager')._createId());
@@ -72,8 +74,7 @@ export default class Page extends Model {
    * @example
    * const arrayOfFrames = page.getAllFrames();
    */
-  getAllFrames(): Frame[] {
-    //@ts-ignore
+  getAllFrames() {
     return this.getFrames().models || [];
   }
 
@@ -83,7 +84,7 @@ export default class Page extends Model {
    * @example
    * const mainFrame = page.getMainFrame();
    */
-  getMainFrame(): Frame {
+  getMainFrame() {
     return this.getFrames().at(0);
   }
 
@@ -94,7 +95,7 @@ export default class Page extends Model {
    * const rootComponent = page.getMainComponent();
    * console.log(rootComponent.toHTML());
    */
-  getMainComponent() {
+  getMainComponent(): ComponentWrapper {
     const frame = this.getMainFrame();
     return frame?.getComponent();
   }

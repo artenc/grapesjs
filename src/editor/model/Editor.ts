@@ -6,9 +6,9 @@ import { getModel, hasWin, isEmptyObj } from '../../utils/mixins';
 import { Model } from '../../common';
 import Selected from './Selected';
 import FrameView from '../../canvas/view/FrameView';
-import EditorModule from '..';
+import Editor from '..';
 import EditorView from '../view/EditorView';
-import { IModule } from '../../abstract/Module';
+import Module from '../../abstract/Module';
 import CanvasModule from '../../canvas';
 import ComponentManager from '../../dom_components';
 import CssComposer from '../../css_composer';
@@ -17,43 +17,61 @@ import Component from '../../dom_components/model/Component';
 import BlockManager from '../../block_manager';
 import SelectorManager from '../../selector_manager';
 import ParserModule from '../../parser';
+import StorageManager from '../../storage_manager';
+import TraitManager from '../../trait_manager';
+import LayerManager from '../../navigator';
+import AssetManager from '../../asset_manager';
+import DeviceManager from '../../device_manager';
+import PageManager from '../../pages';
+import I18nModule from '../../i18n';
+import UtilsModule from '../../utils';
+import KeymapsModule from '../../keymaps';
+import ModalModule from '../../modal_dialog';
+import PanelManager from '../../panels';
+import CodeManagerModule from '../../code_manager';
+import UndoManagerModule from '../../undo_manager';
+import RichTextEditorModule from '../../rich_text_editor';
+import CommandsModule from '../../commands';
+import StyleManager from '../../style_manager';
+import CssRule from '../../css_composer/model/CssRule';
+import { HTMLGeneratorBuildOptions } from '../../code_manager/model/HtmlGenerator';
+import { CssGeneratorBuildOptions } from '../../code_manager/model/CssGenerator';
+import ComponentView from '../../dom_components/view/ComponentView';
+import { ProjectData } from '../../storage_manager/model/IStorage';
+import CssRules from '../../css_composer/model/CssRules';
+import Frame from '../../canvas/model/Frame';
 
-//@ts-ignore
 Backbone.$ = $;
 
-const deps = [
-  require('utils'),
-  require('i18n'),
-  require('keymaps'),
-  require('undo_manager'),
-  require('storage_manager'),
-  require('device_manager'),
-  require('parser'),
-  require('style_manager'),
-  require('selector_manager'),
-  require('modal_dialog'),
-  require('code_manager'),
-  require('panels'),
-  require('rich_text_editor'),
-  require('asset_manager'),
-  require('css_composer'),
-  require('pages'),
-  require('trait_manager'),
-  require('dom_components'),
-  require('navigator'),
-  require('canvas'),
-  require('commands'),
-  require('block_manager'),
+const deps: (new (em: EditorModel) => Module)[] = [
+  UtilsModule,
+  I18nModule,
+  KeymapsModule,
+  UndoManagerModule,
+  StorageManager,
+  DeviceManager,
+  ParserModule,
+  StyleManager,
+  SelectorManager,
+  ModalModule,
+  CodeManagerModule,
+  PanelManager,
+  RichTextEditorModule,
+  AssetManager,
+  CssComposer,
+  PageManager,
+  TraitManager,
+  ComponentManager,
+  LayerManager,
+  CanvasModule,
+  CommandsModule,
+  BlockManager,
 ];
 const depsByName: any = {};
 
 const ts_deps: any[] = [];
 
-Extender({
-  //@ts-ignore
-  Backbone: Backbone,
-  $: Backbone.$,
-});
+Extender({ $ });
 
 const logs = {
   debug: console.log,
@@ -93,7 +111,7 @@ export default class EditorModel extends Model {
     return this.get('storables');
   }
 
-  get modules(): IModule[] {
+  get modules(): Module[] {
     return this.get('modules');
   }
 
@@ -109,11 +127,47 @@ export default class EditorModel extends Model {
     return this.get('shallow');
   }
 
+  get I18n(): I18nModule {
+    return this.get('I18n');
+  }
+
+  get Utils(): UtilsModule {
+    return this.get('Utils');
+  }
+
+  get Commands(): CommandsModule {
+    return this.get('Commands');
+  }
+
+  get Keymaps(): KeymapsModule {
+    return this.get('Keymaps');
+  }
+
+  get Modal(): ModalModule {
+    return this.get('Modal');
+  }
+
+  get Panels(): PanelManager {
+    return this.get('Panels');
+  }
+
+  get CodeManager(): CodeManagerModule {
+    return this.get('CodeManager');
+  }
+
+  get UndoManager(): UndoManagerModule {
+    return this.get('UndoManager');
+  }
+
+  get RichTextEditor(): RichTextEditorModule {
+    return this.get('RichTextEditor');
+  }
+
   get Canvas(): CanvasModule {
     return this.get('Canvas');
   }
 
-  get Editor(): EditorModule {
+  get Editor(): Editor {
     return this.get('Editor');
   }
 
@@ -133,8 +187,36 @@ export default class EditorModel extends Model {
     return this.get('SelectorManager');
   }
 
+  get Storage(): StorageManager {
+    return this.get('StorageManager');
+  }
+
+  get Traits(): TraitManager {
+    return this.get('TraitManager');
+  }
+
   get Parser(): ParserModule {
     return this.get('Parser');
+  }
+
+  get Layers(): LayerManager {
+    return this.get('LayerManager');
+  }
+
+  get Assets(): AssetManager {
+    return this.get('AssetManager');
+  }
+
+  get Devices(): DeviceManager {
+    return this.get('DeviceManager');
+  }
+
+  get Pages(): PageManager {
+    return this.get('PageManager');
+  }
+
+  get Styles(): StyleManager {
+    return this.get('StyleManager');
   }
 
   constructor(conf: EditorConfig = {}) {
@@ -298,8 +380,8 @@ export default class EditorModel extends Model {
    * @return {this}
    * @private
    */
-  loadModule(moduleName: any) {
-    const Mod = this.initModule(moduleName);
+  loadModule(Module: any) {
+    const Mod = this.initModule(Module);
 
     // Bind the module to the editor model if public
     !Mod.private && this.set(Mod.name, Mod);
@@ -312,8 +394,7 @@ export default class EditorModel extends Model {
   initModule(moduleOrName: any, opt: any = {}) {
     const { config } = this;
     const Module = typeof moduleOrName == 'string' ? depsByName[moduleOrName] : moduleOrName;
-    const Mod = new (Module.default || Module)(this);
-
+    const Mod = new Module(this);
     const name = (Mod.name.charAt(0).toLowerCase() + Mod.name.slice(1)) as EditorConfigKeys;
     const cfgParent = !isUndefined(config[name]) ? config[name] : config[Mod.name as EditorConfigKeys];
     const cfg = (cfgParent === true ? {} : cfgParent || {}) as Record<string, any>;
@@ -362,7 +443,7 @@ export default class EditorModel extends Model {
    * @return {this}
    * @public
    */
-  init(editor: EditorModule, opts = {}) {
+  init(editor: Editor, opts = {}) {
     if (this.destroyed) {
       this.initialize(opts);
       this.destroyed = false;
@@ -370,7 +451,7 @@ export default class EditorModel extends Model {
     this.set('Editor', editor);
   }
 
-  getEditor(): EditorModule {
+  getEditor(): Editor {
     return this.get('Editor');
   }
 
@@ -523,7 +604,7 @@ export default class EditorModel extends Model {
    * @param  {Object} [opts={}] Options, optional
    * @public
    */
-  addSelected(el: Component, opts: any = {}) {
+  addSelected(el: Component | Component[], opts: any = {}) {
     const model = getModel(el, $);
     const models = isArray(model) ? model : [model];
 
@@ -553,7 +634,7 @@ export default class EditorModel extends Model {
    * @param  {Object} [opts={}] Options, optional
    * @public
    */
-  removeSelected(el: any, opts = {}) {
+  removeSelected(el: Component | Component[], opts = {}) {
     this.selected.removeComponent(getModel(el, $), opts);
   }
 
@@ -563,7 +644,7 @@ export default class EditorModel extends Model {
    * @param  {Object} [opts={}] Options, optional
    * @public
    */
-  toggleSelected(el: any, opts = {}) {
+  toggleSelected(el: Component | Component[], opts: any = {}) {
     const model = getModel(el, $);
     const models = isArray(model) ? model : [model];
 
@@ -660,7 +741,7 @@ export default class EditorModel extends Model {
    * @returns {Array<CssRule>}
    * @public
    */
-  addStyle(style: any, opts = {}) {
+  addStyle(style: any, opts = {}): CssRule[] {
     const res = this.getStyle().add(style, opts);
     return isArray(res) ? res : [res];
   }
@@ -670,8 +751,8 @@ export default class EditorModel extends Model {
    * @return {Rules}
    * @private
    */
-  getStyle() {
-    return this.get('CssComposer').getAll();
+  getStyle(): CssRules {
+    return this.Css.getAll();
   }
 
   /**
@@ -688,7 +769,7 @@ export default class EditorModel extends Model {
    * Get the current selector state
    * @returns {String}
    */
-  getState() {
+  getState(): string {
     return this.get('state') || '';
   }
 
@@ -698,7 +779,7 @@ export default class EditorModel extends Model {
    * @returns {string} HTML string
    * @public
    */
-  getHtml(opts: any = {}) {
+  getHtml(opts: { component?: Component } & HTMLGeneratorBuildOptions = {}): string {
     const { config } = this;
     const { optsHtml } = config;
     const js = config.jsInHtml ? this.getJs(opts) : '';
@@ -719,17 +800,17 @@ export default class EditorModel extends Model {
    * @returns {string} CSS string
    * @public
    */
-  getCss(opts: any = {}) {
-    const config = this.config;
+  getCss(opts: { component?: Component; avoidProtected?: boolean } & CssGeneratorBuildOptions = {}) {
+    const { config } = this;
     const { optsCss } = config;
     const avoidProt = opts.avoidProtected;
     const keepUnusedStyles = !isUndefined(opts.keepUnusedStyles) ? opts.keepUnusedStyles : config.keepUnusedStyles;
     const cssc = this.get('CssComposer');
-    const wrp = opts.component || this.get('DomComponents').getComponent();
-    const protCss = !avoidProt ? config.protectedCss : '';
+    const wrp = opts.component || this.Components.getComponent();
+    const protCss = !avoidProt ? config.protectedCss! : '';
     const css =
       wrp &&
-      this.get('CodeManager').getCode(wrp, 'css', {
+      this.CodeManager.getCode(wrp, 'css', {
         cssc,
         keepUnusedStyles,
         ...optsCss,
@@ -743,9 +824,9 @@ export default class EditorModel extends Model {
    * @return {string} JS string
    * @public
    */
-  getJs(opts: any = {}) {
-    var wrp = opts.component || this.get('DomComponents').getWrapper();
-    return wrp ? this.get('CodeManager').getCode(wrp, 'js').trim() : '';
+  getJs(opts: { component?: Component } = {}) {
+    var wrp = opts.component || this.Components.getWrapper();
+    return wrp ? this.CodeManager.getCode(wrp, 'js').trim() : '';
   }
 
   /**
@@ -771,12 +852,12 @@ export default class EditorModel extends Model {
    * @public
    */
   async load(options?: any) {
-    const result = await this.get('StorageManager').load(options);
+    const result = await this.Storage.load(options);
     this.loadData(result);
     return result;
   }
 
-  storeData() {
+  storeData(): ProjectData {
     let result = {};
     // Sync content if there is an active RTE
     const editingCmp = this.getEditing();
@@ -788,7 +869,7 @@ export default class EditorModel extends Model {
     return JSON.parse(JSON.stringify(result));
   }
 
-  loadData(data = {}) {
+  loadData(data: ProjectData = {}): ProjectData {
     if (!isEmptyObj(data)) {
       this.storables.forEach(module => module.clear());
       this.storables.forEach(module => module.load(data));
@@ -882,7 +963,7 @@ export default class EditorModel extends Model {
     return this.get('currentFrame');
   }
 
-  getCurrentFrameModel() {
+  getCurrentFrameModel(): Frame {
     return (this.getCurrentFrame() || {}).model;
   }
 
@@ -957,12 +1038,12 @@ export default class EditorModel extends Model {
     hasWin() && $(config.el).empty().attr(this.attrsOrig);
   }
 
-  getEditing() {
+  getEditing(): Component | undefined {
     const res = this.get('editing');
-    return (res && res.model) || null;
+    return (res && res.model) || undefined;
   }
 
-  setEditing(value: boolean) {
+  setEditing(value: boolean | ComponentView) {
     this.set('editing', value);
     return this;
   }
