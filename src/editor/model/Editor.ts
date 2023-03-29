@@ -9,6 +9,11 @@ import FrameView from '../../canvas/view/FrameView';
 import EditorModule from '..';
 import EditorView from '../view/EditorView';
 import { IModule } from '../../abstract/Module';
+import CanvasModule from '../../canvas';
+import ComponentManager from '../../dom_components';
+import CssComposer from '../../css_composer';
+import { EditorConfig, EditorConfigKeys } from '../config/config';
+import Component from '../../dom_components/model/Component';
 
 //@ts-ignore
 Backbone.$ = $;
@@ -75,7 +80,7 @@ export default class EditorModel extends Model {
   __skip = false;
   defaultRunning = false;
   destroyed = false;
-  _config: any;
+  _config: EditorConfig;
   attrsOrig: any;
   timedInterval?: number;
   updateItr?: number;
@@ -101,7 +106,23 @@ export default class EditorModel extends Model {
     return this.get('shallow');
   }
 
-  constructor(conf = {}) {
+  get Canvas(): CanvasModule {
+    return this.get('Canvas');
+  }
+
+  get Editor(): EditorModule {
+    return this.get('Editor');
+  }
+
+  get Components(): ComponentManager {
+    return this.get('DomComponents');
+  }
+
+  get Css(): CssComposer {
+    return this.get('CssComposer');
+  }
+
+  constructor(conf: EditorConfig = {}) {
     super();
     this._config = conf;
     const { config } = this;
@@ -123,7 +144,7 @@ export default class EditorModel extends Model {
       ? toArray(el.attributes).reduce((res, next) => {
           res[next.nodeName] = next.nodeValue;
           return res;
-        }, {})
+        }, {} as Record<string, any>)
       : '';
 
     // Move components to pages
@@ -178,8 +199,12 @@ export default class EditorModel extends Model {
    * @return {any} Returns the configuration object or
    *  the value of the specified property
    */
-  getConfig(prop?: string) {
-    const config = this.config;
+  getConfig<
+    P extends EditorConfigKeys | undefined = undefined,
+    R = P extends EditorConfigKeys ? EditorConfig[P] : EditorConfig
+  >(prop?: P): R {
+    const { config } = this;
+    // @ts-ignore
     return isUndefined(prop) ? config : config[prop];
   }
 
@@ -274,9 +299,9 @@ export default class EditorModel extends Model {
     const Module = typeof moduleOrName == 'string' ? depsByName[moduleOrName] : moduleOrName;
     const Mod = new (Module.default || Module)(this);
 
-    const name = Mod.name.charAt(0).toLowerCase() + Mod.name.slice(1);
-    const cfgParent = !isUndefined(config[name]) ? config[name] : config[Mod.name];
-    const cfg = cfgParent === true ? {} : cfgParent || {};
+    const name = (Mod.name.charAt(0).toLowerCase() + Mod.name.slice(1)) as EditorConfigKeys;
+    const cfgParent = !isUndefined(config[name]) ? config[name] : config[Mod.name as EditorConfigKeys];
+    const cfg = (cfgParent === true ? {} : cfgParent || {}) as Record<string, any>;
     cfg.pStylePrefix = config.pStylePrefix || '';
 
     if (!isUndefined(cfgParent) && !cfgParent) {
@@ -330,7 +355,7 @@ export default class EditorModel extends Model {
     this.set('Editor', editor);
   }
 
-  getEditor() {
+  getEditor(): EditorModule {
     return this.get('Editor');
   }
 
@@ -398,7 +423,7 @@ export default class EditorModel extends Model {
    * @param  {Object} [opts={}] Options, optional
    * @public
    */
-  setSelected(el?: any | any[], opts: any = {}) {
+  setSelected(el?: Component | Component[], opts: any = {}) {
     const { event } = opts;
     const ctrlKey = event && (event.ctrlKey || event.metaKey);
     const { shiftKey } = event || {};
@@ -483,14 +508,25 @@ export default class EditorModel extends Model {
    * @param  {Object} [opts={}] Options, optional
    * @public
    */
-  addSelected(el: any, opts: any = {}) {
+  addSelected(el: Component, opts: any = {}) {
     const model = getModel(el, $);
     const models = isArray(model) ? model : [model];
 
     models.forEach(model => {
-      if (model && !model.get('selectable')) return;
       const { selected } = this;
+      if (
+        !model ||
+        !model.get('selectable') ||
+        // Avoid selecting children of selected components
+        model.parents().some((parent: Component) => selected.hasComponent(parent))
+      ) {
+        return;
+      }
       opts.forceChange && this.removeSelected(model, opts);
+      // Remove from selection, children of the component to select
+      const toDeselect = selected.allComponents().filter(cmp => contains(cmp.parents(), model));
+      toDeselect.forEach(cmp => this.removeSelected(cmp, opts));
+
       selected.addComponent(model, opts);
       model && this.trigger('component:select', model, opts);
     });
@@ -884,6 +920,7 @@ export default class EditorModel extends Model {
   destroyAll() {
     const { config, view } = this;
     const editor = this.getEditor();
+    // @ts-ignore
     const { editors = [] } = config.grapesjs || {};
     const shallow = this.get('shallow');
     shallow?.destroyAll();

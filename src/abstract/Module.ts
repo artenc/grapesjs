@@ -1,5 +1,6 @@
-import { isElement, isUndefined } from 'underscore';
+import { isElement, isUndefined, isString } from 'underscore';
 import { Collection, View } from '../common';
+import { EditorConfigKeys } from '../editor/config/config';
 import EditorModel from '../editor/model/Editor';
 import { createId, isDef, deepMerge } from '../utils/mixins';
 
@@ -21,7 +22,7 @@ export interface IBaseModule<TConfig extends any> {
 export interface ModuleConfig {
   name?: string;
   stylePrefix?: string;
-  appendTo?: string;
+  appendTo?: string | HTMLElement;
 }
 
 export interface IStorableModule extends IModule {
@@ -43,9 +44,9 @@ export default abstract class Module<T extends ModuleConfig = ModuleConfig> impl
   constructor(em: EditorModel, moduleName: string, defaults?: T) {
     this._em = em;
     this._name = moduleName;
-    const name = this.name.charAt(0).toLowerCase() + this.name.slice(1);
-    const cfgParent = !isUndefined(em.config[name]) ? em.config[name] : em.config[this.name];
-    const cfg = cfgParent === true ? {} : cfgParent || {};
+    const name = (this.name.charAt(0).toLowerCase() + this.name.slice(1)) as EditorConfigKeys;
+    const cfgParent = !isUndefined(em.config[name]) ? em.config[name] : em.config[this.name as EditorConfigKeys];
+    const cfg = (cfgParent === true ? {} : cfgParent || {}) as Record<string, any>;
     cfg.pStylePrefix = em.config.pStylePrefix || '';
 
     if (!isUndefined(cfgParent) && !cfgParent) {
@@ -67,7 +68,7 @@ export default abstract class Module<T extends ModuleConfig = ModuleConfig> impl
   onLoad?(): void;
   init(cfg: T) {}
   abstract destroy(): void;
-  abstract render(): HTMLElement | JQuery<HTMLElement> | undefined;
+  render(): HTMLElement | JQuery<HTMLElement> | void {}
   postLoad(key: any): void {}
 
   get name(): string {
@@ -108,8 +109,8 @@ export abstract class ItemManagerModule<
   protected all: TCollection;
   view?: View;
 
-  constructor(em: EditorModel, moduleName: string, all: any, events?: any) {
-    super(em, moduleName);
+  constructor(em: EditorModel, moduleName: string, all: any, events?: any, defaults?: TConf) {
+    super(em, moduleName, defaults);
     this.all = all;
     this.events = events;
     this.__initListen();
@@ -210,14 +211,14 @@ export abstract class ItemManagerModule<
     return !opts.abort && rm();
   }
 
-  __catchAllEvent(event: any, model: any, coll: any, opts: any) {
+  __catchAllEvent(event: any, model: any, coll: any, opts?: any) {
     const { em, events } = this;
     const options = opts || coll;
     em && events.all && em.trigger(events.all, { event, model, options });
     this.__onAllEvent();
   }
 
-  __appendTo() {
+  __appendTo(renderProps?: any) {
     //@ts-ignore
     const elTo = this.config.appendTo;
 
@@ -225,7 +226,7 @@ export abstract class ItemManagerModule<
       const el = isElement(elTo) ? elTo : document.querySelector(elTo);
       if (!el) return this.__logWarn('"appendTo" element not found');
       // @ts-ignore
-      el.appendChild(this.render());
+      el.appendChild(this.render(renderProps));
     }
   }
 

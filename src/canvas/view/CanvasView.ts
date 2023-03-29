@@ -399,17 +399,16 @@ export default class CanvasView extends View<Canvas> {
         <div class="${ppfx}offset-fixed-v"></div>
       </div>
     `);
-    const toolsEl = el.querySelector(`#${ppfx}tools`);
-    this.hlEl = el.querySelector(`.${ppfx}highlighter`) as HTMLElement;
-    this.badgeEl = el.querySelector(`.${ppfx}badge`) as HTMLElement;
-    this.placerEl = el.querySelector(`.${ppfx}placeholder`) as HTMLElement;
-    this.ghostEl = el.querySelector(`.${ppfx}ghost`) as HTMLElement;
-    this.toolbarEl = el.querySelector(`.${ppfx}toolbar`) as HTMLElement;
-    this.resizerEl = el.querySelector(`.${ppfx}resizer`) as HTMLElement;
-    this.offsetEl = el.querySelector(`.${ppfx}offset-v`) as HTMLElement;
-    this.fixedOffsetEl = el.querySelector(`.${ppfx}offset-fixed-v`) as HTMLElement;
-    this.toolsGlobEl = el.querySelector(`.${ppfx}tools-gl`) as HTMLElement;
-    this.toolsEl = toolsEl as HTMLElement;
+    this.toolsEl = el.querySelector(`#${ppfx}tools`)!;
+    this.hlEl = el.querySelector(`.${ppfx}highlighter`)!;
+    this.badgeEl = el.querySelector(`.${ppfx}badge`)!;
+    this.placerEl = el.querySelector(`.${ppfx}placeholder`)!;
+    this.ghostEl = el.querySelector(`.${ppfx}ghost`)!;
+    this.toolbarEl = el.querySelector(`.${ppfx}toolbar`)!;
+    this.resizerEl = el.querySelector(`.${ppfx}resizer`)!;
+    this.offsetEl = el.querySelector(`.${ppfx}offset-v`)!;
+    this.fixedOffsetEl = el.querySelector(`.${ppfx}offset-fixed-v`)!;
+    this.toolsGlobEl = el.querySelector(`.${ppfx}tools-gl`)!;
     this.el.className = getUiClass(em, this.className);
     this.ready = true;
     this._renderFrames();

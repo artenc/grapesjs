@@ -23,6 +23,10 @@ declare namespace Backbone {
     remove(model: {} | TModel): TModel;
     remove(models: Array<{} | TModel>): TModel[];
     reset(models?: Array<{} | TModel>): TModel[];
+    forEach(iterator: (item: TModel) => void, context?: any): TModel[];
+    filter(iterator: (item: TModel) => boolean, context?: any): TModel[];
+    map(iterator: (item: TModel) => any, context?: any): any[];
+    each(callback: (item: TModel) => void);
   }
 
   interface GenericModel extends Model<{}> { }
@@ -88,7 +92,9 @@ declare namespace grapesjs {
     /** By default Grapes injects base CSS into the canvas. For example, it sets body margin to 0
      * and sets a default background color of white. This CSS is desired in most cases.
      * use this property if you wish to overwrite the base CSS to your own CSS. This is most
-     * useful if for example your template is not based off a document with 0 as body margin. */
+     * useful if for example your template is not based off a document with 0 as body margin.
+     * @deprecated in favor of `config.canvas.frameStyle`
+     */
     baseCss?: string;
 
     /** CSS that could only be seen (for instance, inside the code viewer) */
@@ -255,34 +261,140 @@ declare namespace grapesjs {
     keepUnusedStyles?: 0;
 
     layerManager?: LayerManagerConfig;
+
+    parser?: ParserConfig;
   }
 
   interface AssetManagerConfig {
-    assets?: Array<object>;
+    /**
+     * Default assets.
+     * @example
+     * [
+     *  'https://...image1.png',
+     *  'https://...image2.png',
+     *  {type: 'image', src: 'https://...image3.png', someOtherCustomProp: 1}
+     * ]
+     */
+    assets?: (string | Record<string, any>)[];
+    /**
+     * Content to add where there is no assets to show.
+     * @default ''
+     * @example 'No <b>assets</b> here, drag to upload'
+     */
     noAssets?: string;
+    /**
+     * Style prefix
+     * @default 'am-'
+     */
     stylePrefix?: string;
-    upload?: boolean;
+    /**
+     * Upload endpoint, set `false` to disable upload.
+     * @example 'https://endpoint/upload/assets'
+     */
+    upload?: false | string;
+    /**
+     * The name used in POST to pass uploaded files.
+     * @default 'files'
+     */
     uploadName?: string;
-    headers?: object;
-    params?: object;
+    /**
+     * Custom headers to pass with the upload request.
+     * @default {}
+     */
+    headers?: Record<string, any>;
+    /**
+     * Custom parameters to pass with the upload request, eg. csrf token.
+     * @default {}
+     */
+    params?: Record<string, any>;
+    /**
+     * The credentials setting for the upload request, eg. 'include', 'omit'.
+     * @default 'include'
+     */
     credentials?: RequestCredentials;
+    /**
+     * Allow uploading multiple files per request. If disabled filename will not have '[]' appended.
+     * @default true
+     */
     multiUpload?: boolean;
+    /**
+     * If true, tries to add automatically uploaded assets. To make it work the server should respond with a JSON containing assets in a data key, eg:
+     * { data: [ 'https://.../image.png', {src: 'https://.../image2.png'} ]
+     * @default true
+     */
     autoAdd?: boolean;
-    uploadText?: string;
-    addBtnText?: string;
-    customFetch?: Function;
-    uploadFile?: Function;
+    /**
+     * To upload your assets, the module uses Fetch API. With this option you can overwrite it with your own logic. The custom function should return a Promise.
+     * @example
+     * customFetch: (url, options) => axios(url, { data: options.body }),
+     */
+    customFetch?: (url: string, options: Record<string, any>) => Promise<void>;
+    /**
+     * Custom uploadFile function.
+     * Differently from the `customFetch` option, this gives a total control over the uploading process, but you also have to emit all `asset:upload:*` events b
+     * y yourself (if you need to use them somewhere).
+     * @example
+     * uploadFile: (ev) => {
+     *  const files = ev.dataTransfer ? ev.dataTransfer.files : ev.target.files;
+     *  // ...send somewhere
+     * }
+     */
+    uploadFile?: (ev: DragEvent) => void;
+    /**
+     * In the absence of 'uploadFile' or 'upload' assets will be embedded as Base64.
+     * @default true
+     */
     embedAsBase64?: boolean;
-    handleAdd?: Function;
+    /**
+     * Handle the image url submit from the built-in 'Add image' form.
+     * @example
+     * handleAdd: (textFromInput) => {
+     *   // some check...
+     *   editor.AssetManager.add(textFromInput);
+     * }
+     */
+    handleAdd?: (value: string) => void;
+    /**
+     * Method called before upload, on return false upload is canceled.
+     * @example
+     * beforeUpload: (files) => {
+     *  // logic...
+     *  const stopUpload = true;
+     *  if(stopUpload) return false;
+     * }
+     */
+    beforeUpload?: (files: any) => void | false;
+    /**
+     * Toggles visiblity of assets url input
+     * @default true
+     */
+    showUrlInput?: boolean;
+    /**
+     * Avoid rendering the default asset manager.
+     * @default false
+     */
+    custom?:
+      | boolean
+      | {
+          open?: (props: any) => void;
+          close?: (props: any) => void;
+        };
+    /**
+     * Enable an upload dropzone on the entire editor (not document) when dragging files over it.
+     * If active the dropzone disable/hide the upload dropzone in asset modal, otherwise you will get double drops (#507).
+     * @deprecated
+     */
     dropzone?: boolean;
-    openAssetsOnDrop?: number;
+    /**
+     * Open the asset manager once files are been dropped via the dropzone.
+     * @deprecated
+     */
+    openAssetsOnDrop?: boolean;
+    /**
+     * Any dropzone content to append inside dropzone element
+     * @deprecated
+     */
     dropzoneContent?: string;
-    modalTitle?: string;
-    inputPlaceholder?: string;
-    custom?: boolean | {
-      open?: (props: any) => void,
-      close?: (props: any) => void,
-    };
   }
 
   interface CanvasConfig {
@@ -292,6 +404,7 @@ declare namespace grapesjs {
     customBadgeLabel?: Function;
     autoscrollLimit?: number;
     notTextable?: Array<string>;
+    frameStyle?: string;
   }
 
   interface StyleManagerConfig {
@@ -339,8 +452,8 @@ declare namespace grapesjs {
     type?: string;
     stepsBeforeSave?: number;
     recovery?: boolean | Function;
-    onStore?: (data: any) => any;
-    onLoad?: (data: any) => any;
+    onStore?: (data: any, editor: Editor) => any;
+    onLoad?: (data: any, editor: Editor) => any;
     options?: {
       local?: LocalStorageConfig;
       remote?: RemoteStorageConfig;
@@ -360,8 +473,8 @@ declare namespace grapesjs {
     contentTypeJson?: boolean;
     credentials?: RequestCredentials;
     fetchOptions?: string | ((opts: object) => object);
-    onStore?: (data: any) => any;
-    onLoad?: (data: any) => any;
+    onStore?: (data: any, editor: Editor) => any;
+    onLoad?: (data: any, editor: Editor) => any;
   }
 
   interface DomComponentsConfig {
@@ -430,6 +543,7 @@ declare namespace grapesjs {
     statesLabel?: string;
     selectedLabel?: string;
     states?: Array<object>;
+    componentFirst?: boolean;
   }
 
   interface DeviceManagerConfig {
@@ -523,6 +637,10 @@ declare namespace grapesjs {
     extend?: any;
   }
 
+  interface ParserConfig {
+    optionsHtml?: object;
+  }
+
   function init(config: EditorConfig): Editor;
 
   interface Trait extends Backbone.Model<TraitOptions> {
@@ -574,20 +692,20 @@ declare namespace grapesjs {
 
   interface ButtonOptions {
     id: string;
-    label: string;
-    tagName: 'span';
-    className: string;
-    command: string | ((editor: Editor, opts?: any) => void);
-    context: string;
-    buttons: any[];
-    attributes: object;
-    options: object;
-    active: boolean;
-    dragDrop: boolean;
-    togglable: boolean;
-    runDefaultCommand: boolean;
-    stopDefaultCommand: boolean;
-    disable: boolean;
+    label?: string;
+    tagName?: 'span';
+    className?: string;
+    command?: string | ((editor: Editor, opts?: any) => void);
+    context?: string;
+    buttons?: any[];
+    attributes?: { [key:string]: string};
+    options?: object;
+    active?: boolean;
+    dragDrop?: boolean;
+    togglable?: boolean;
+    runDefaultCommand?: boolean;
+    stopDefaultCommand?: boolean;
+    disable?: boolean;
   }
 
   interface ComponentView {
@@ -736,6 +854,7 @@ declare namespace grapesjs {
     Devices: Devices;
     DeviceManager: Devices;
     RichTextEditor: RichTextEditor;
+    I18n: I18n;
     Parser: Parser;
     Utils: object;
     Config: EditorConfig | object;
@@ -746,7 +865,7 @@ declare namespace grapesjs {
      * @returns Returns the configuration object or
      *  the value of the specified property
      */
-    getConfig(prop?: string): EditorConfig | object;
+    getConfig(prop?: string): EditorConfig;
     /**
      * Returns HTML built inside canvas
      * @param [opts = {}] - Options
@@ -814,11 +933,13 @@ declare namespace grapesjs {
      * @param [opts.avoidUpdateStyle = false] - If the HTML string contains styles,
      * by default, they will be created and, if already exist, updated. When this option
      * is true, styles already created will not be updated.
+     * @param [opts.at] - If provided, an index to insert these components at.
      */
     addComponents(
       components: object[] | any | string,
       opts?: {
         avoidUpdateStyle?: boolean;
+        at?: number;
       }
     ): Component[];
     /**
@@ -873,7 +994,7 @@ declare namespace grapesjs {
      * @param [opts.scroll] - Scroll canvas to the selected element
      */
     select(
-      el: Component | HTMLElement,
+      el?: Component | HTMLElement,
       opts?: {
         scroll?: boolean;
       }
@@ -1140,6 +1261,8 @@ declare namespace grapesjs {
      * const strHtml = editor.html`Escaped ${unsafeStr}, unescaped $${safeStr}`;
      */
     html(literals: string[], substs: string[]): string;
+
+    getModel(): Backbone.Model<any>;
   }
 
   type GrapesEvent =
@@ -1231,7 +1354,7 @@ declare namespace grapesjs {
     | `stop:${string}`
     | `abort:${string}`;
 
-  type GeneralEvent = 'canvasScroll' | 'undo' | 'redo' | 'load';
+  type GeneralEvent = 'canvasScroll' | 'undo' | 'redo' | 'load' | 'update';
 
   /**
    * You can customize the initial state of the module from the editor initialization, by passing the following [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/asset_manager/config/config.js)
@@ -1356,7 +1479,7 @@ declare namespace grapesjs {
      * const asset = assetManager.get('http://img.jpg');
      * assetManager.remove(asset);
      */
-    remove(): any;
+    remove(asset: any, opts?: Record<string, any>): any;
     /**
      * Store assets data to the selected storage
      * @example
@@ -1537,12 +1660,12 @@ declare namespace grapesjs {
      * const block = blockManager.get('BLOCK_ID');
      * blockManager.remove(block);
      */
-    remove(): any;
+    remove(block: object | string): any;
     /**
      * Get all available categories.
      * It's possible to add categories only within blocks via 'add()' method
      */
-    getCategories(): any[] | Backbone.Collection<Backbone.Model<{}>>;
+    getCategories(): Backbone.Collection<Backbone.Model<any>>;
     /**
      * Return the Blocks container element
      */
@@ -1665,6 +1788,12 @@ declare namespace grapesjs {
     self(): Block;
   }
 
+  interface Command {
+    run: (editor: Editor, sender?: any, opts?: Record<string, any>) => any;
+    stop?: (editor: Editor, sender?: any, opts?: Record<string, any>) => any;
+    [key: string]: unknown;
+  }
+
   /**
    * You can customize the initial state of the module from the editor initialization, by passing the following [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/commands/config/config.js)
    * ```js
@@ -1720,14 +1849,9 @@ declare namespace grapesjs {
      * // As a function
      * commands.add('myCommand2', editor => { ... });
      */
-    add(
+     add<F, S>(
       id: string,
-      command: ((editor: Editor, sender?: any, opts?: Record<string, any>) => any) |
-        {
-          run?: (editor: Editor, sender?: any, opts?: Record<string, any>) => any;
-          stop?: (editor: Editor, sender?: any, opts?: Record<string, any>) => any;
-          [key: string]: unknown;
-        }
+      command: Command['run'] | (Command & S & ThisType<Command & S>),
     ): void;
     /**
      * Get command by ID
@@ -2201,8 +2325,13 @@ declare namespace grapesjs {
    *
    * [Component]: component.html
    */
-  interface Component extends Backbone.Model<ComponentModelProperties> {
+  interface Component extends Backbone.Model<ComponentModelProperties>, Styleable {
     view?: ComponentView;
+
+    /**
+     * A randomized unique id associated with the component prefixed with `i`
+     */
+    ccid?: string
 
     /**
      * Hook method, called once the model is created
@@ -3908,7 +4037,7 @@ declare namespace grapesjs {
      * const device = deviceManager.get('some-id');
      * deviceManager.select(device);
      */
-    select(): void;
+    select(device: string | any): void;
     /**
      * Get the selected device
      * @example
@@ -3944,6 +4073,7 @@ declare namespace grapesjs {
   }
 
   interface Device extends Backbone.Model<DeviceOptions> {
+    id?: string,
     getName(): string;
     getWidthMedia(): string;
   }
@@ -4120,6 +4250,10 @@ declare namespace grapesjs {
      * Get all selectors
      */
     getAll(): any;
+
+    select(value: any): any;
+
+    getSelectedAll(): Selector[];
   }
 
   interface SelectorOptions {
@@ -4314,7 +4448,7 @@ declare namespace grapesjs {
      * // Remove by selector
      * css.remove('.my-cls-2');
      */
-    remove(): any;
+    remove(toRemove: object | string): any;
     /**
      * Remove all rules
      */
@@ -5340,7 +5474,7 @@ declare namespace grapesjs {
      * const somePage = pageManager.get('page-id');
      * pageManager.remove(somePage);
      */
-    remove(): any;
+    remove(page: string | Page): any;
     /**
      * Get page by id
      * @example
@@ -5376,7 +5510,7 @@ declare namespace grapesjs {
      * const somePage = pageManager.get('page-id');
      * pageManager.select(somePage);
      */
-    select(): this;
+    select(page: string | Page): this;
     /**
      * Get the selected page
      * @example

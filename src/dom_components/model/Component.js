@@ -481,7 +481,7 @@ export default class Component extends StyleableModel {
   addAttributes(attrs, opts = {}) {
     return this.setAttributes(
       {
-        ...this.getAttributes({ noClass: 1 }),
+        ...this.getAttributes({ noClass: true }),
         ...attrs,
       },
       opts
@@ -568,7 +568,9 @@ export default class Component extends StyleableModel {
     const id = this.getId();
 
     // Add classes
-    if (!opts.noClass) {
+    if (opts.noClass) {
+      delete attributes.class;
+    } else {
       this.get('classes').forEach(cls => {
         if (isString(cls)) {
           classes.push(cls);
@@ -1016,7 +1018,7 @@ export default class Component extends StyleableModel {
    * someComponent.append(otherComponent, { at: 0 });
    */
   append(components, opts = {}) {
-    const compArr = isArray(components) ? components : [components];
+    const compArr = isArray(components) ? [...components] : [components];
     const toAppend = compArr.map(comp => {
       if (isString(comp)) {
         return comp;
@@ -1546,6 +1548,7 @@ export default class Component extends StyleableModel {
     delete obj.traits;
     delete obj.status;
     delete obj.open; // used in Layers
+    delete obj._undoexc;
 
     if (!opts.fromUndo) {
       const symbol = obj[keySymbol];

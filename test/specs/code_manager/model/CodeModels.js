@@ -68,10 +68,8 @@ describe('CssGenerator', () => {
   let newCssComp;
 
   beforeEach(() => {
-    em = new Editor({
-      mediaCondition: 'max-width',
-    });
-    newCssComp = () => new CssComposer().init({ em });
+    em = new Editor({});
+    newCssComp = () => new CssComposer(em);
 
     cc = em.get('CssComposer');
     obj = new CssGenerator();

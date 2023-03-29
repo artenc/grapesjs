@@ -57,10 +57,30 @@
 import { EventHandler } from 'backbone';
 import { isUndefined } from 'underscore';
 import { IBaseModule } from '../abstract/Module';
+import AssetManager from '../asset_manager';
+import BlockManager from '../block_manager';
 import CanvasModule from '../canvas';
+import CodeManagerModule from '../code_manager';
+import CssComposer from '../css_composer';
+import DeviceManager from '../device_manager';
+import ComponentManager from '../dom_components';
+import Component from '../dom_components/model/Component';
+import I18nModule from '../i18n';
+import KeymapsModule from '../keymaps';
+import ModalModule from '../modal_dialog';
+import LayerManager from '../navigator';
+import PageManager from '../pages';
+import PanelManager from '../panels';
+import ParserModule from '../parser';
+import { CustomParserCss } from '../parser/config/config';
+import RichTextEditorModule from '../rich_text_editor';
+import SelectorManager from '../selector_manager';
+import StorageManager from '../storage_manager';
+import UndoManagerModule from '../undo_manager';
+import UtilsModule from '../utils';
 import cash from '../utils/cash-dom';
 import html from '../utils/html';
-import defaults from './config/config';
+import defaults, { EditorConfig, EditorConfigKeys } from './config/config';
 import EditorModel from './model/Editor';
 import EditorView from './view/EditorView';
 
@@ -71,125 +91,103 @@ export type ParsedRule = {
   params?: string;
 };
 
-export default class EditorModule implements IBaseModule<typeof defaults> {
-  constructor(config = {}, opts: any = {}) {
-    //@ts-ignore
+type EditorConfigType = EditorConfig & { pStylePrefix?: string };
+
+export default class EditorModule implements IBaseModule<EditorConfig> {
+  editorView?: EditorView;
+  editor: EditorModel;
+  $: typeof cash;
+  em: EditorModel;
+  config: EditorConfigType;
+
+  modules = [];
+
+  constructor(config: EditorConfig = {}, opts: any = {}) {
     this.config = {
       ...defaults,
       ...config,
-      //@ts-ignore
-      pStylePrefix: defaults.stylePrefix,
+      pStylePrefix: config.stylePrefix ?? defaults.stylePrefix,
     };
     this.em = new EditorModel(this.config);
     this.$ = opts.$;
     this.em.init(this);
     this.editor = this.em;
   }
-  editorView?: EditorView;
-  editor: EditorModel;
-  $: cash;
-  em: EditorModel;
-  config: typeof defaults;
 
-  modules = [];
-
-  //@ts-ignore
+  get Config() {
+    return this.em.config;
+  }
   get I18n(): I18nModule {
     return this.em.get('I18n');
   }
-  //@ts-ignore
   get Utils(): UtilsModule {
     return this.em.get('Utils');
-  }
-  get Config(): any {
-    return this.em.config;
   }
   //@ts-ignore
   get Commands(): CommandsModule {
     return this.em.get('Commands');
   }
-  //@ts-ignore
   get Keymaps(): KeymapsModule {
     return this.em.get('Keymaps');
   }
-  //@ts-ignore
   get Modal(): ModalModule {
     return this.em.get('Modal');
   }
-  //@ts-ignore
-  get Panels(): PanelsModule {
+  get Panels(): PanelManager {
     return this.em.get('Panels');
   }
-
   get Canvas(): CanvasModule {
     return this.em.get('Canvas');
   }
-  //@ts-ignore
   get Parser(): ParserModule {
     return this.em.get('Parser');
   }
-  //@ts-ignore
   get CodeManager(): CodeManagerModule {
     return this.em.get('CodeManager');
   }
-  //@ts-ignore
   get UndoManager(): UndoManagerModule {
     return this.em.get('UndoManager');
   }
-  //@ts-ignore
   get RichTextEditor(): RichTextEditorModule {
     return this.em.get('RichTextEditor');
   }
-  //@ts-ignore
-  get Pages(): PageManagerModule {
+  get Pages(): PageManager {
     return this.em.get('PageManager');
   }
-  //@ts-ignore
-  get Components(): DomComponentsModule {
+  get Components(): ComponentManager {
     return this.em.get('DomComponents');
   }
-  //@ts-ignore
-  get DomComponents(): DomComponentsModule {
+  get DomComponents(): ComponentManager {
     return this.em.get('DomComponents');
   }
-  //@ts-ignore
-  get Layers(): LayerManagerModule {
+  get Layers(): LayerManager {
     return this.em.get('LayerManager');
   }
-  //@ts-ignore
-  get LayerManager(): LayerManagerModule {
+  get LayerManager(): LayerManager {
     return this.em.get('LayerManager');
   }
-  //@ts-ignore
-  get Css(): CssComposerModule {
+  get Css(): CssComposer {
     return this.em.get('CssComposer');
   }
-  //@ts-ignore
-  get CssComposer(): CssComposerModule {
+  get CssComposer(): CssComposer {
     return this.em.get('CssComposer');
   }
-  //@ts-ignore
-  get Storage(): StorageManagerModule {
+  get Storage(): StorageManager {
     return this.em.get('StorageManager');
   }
-  //@ts-ignore
-  get StorageManager(): StorageManagerModule {
+  get StorageManager(): StorageManager {
     return this.em.get('StorageManager');
   }
-  //@ts-ignore
-  get Assets(): AssetManagerModule {
+  get Assets(): AssetManager {
     return this.em.get('AssetManager');
   }
-  //@ts-ignore
-  get AssetManager(): AssetManagerModule {
+  get AssetManager(): AssetManager {
     return this.em.get('AssetManager');
   }
-  //@ts-ignore
-  get Blocks(): BlockManagerModule {
+  get Blocks(): BlockManager {
     return this.em.get('BlockManager');
   }
-  //@ts-ignore
-  get BlockManager(): BlockManagerModule {
+  get BlockManager(): BlockManager {
     return this.em.get('BlockManager');
   }
   //@ts-ignore
@@ -200,12 +198,10 @@ export default class EditorModule implements IBaseModule<typeof defaults> {
   get TraitManager(): TraitManagerModule {
     return this.em.get('TraitManager');
   }
-  //@ts-ignore
-  get Selectors(): SelectorManagerCollectionModule {
+  get Selectors(): SelectorManager {
     return this.em.get('SelectorManager');
   }
-  //@ts-ignore
-  get SelectorManager(): SelectorManagerCollectionModule {
+  get SelectorManager(): SelectorManager {
     return this.em.get('SelectorManager');
   }
   //@ts-ignore
@@ -216,12 +212,10 @@ export default class EditorModule implements IBaseModule<typeof defaults> {
   get StyleManager(): StyleManagerModule {
     return this.em.get('StyleManager');
   }
-  //@ts-ignore
-  get Devices(): DeviceManagerModule {
+  get Devices(): DeviceManager {
     return this.em.get('DeviceManager');
   }
-  //@ts-ignore
-  get DeviceManager(): DeviceManagerModule {
+  get DeviceManager(): DeviceManager {
     return this.em.get('DeviceManager');
   }
 
@@ -229,10 +223,11 @@ export default class EditorModule implements IBaseModule<typeof defaults> {
    * Returns configuration object
    * @returns {any} Returns the configuration object or the value of the specified property
    */
-  getConfig(prop?: string) {
-    const config = this.config;
-    //@ts-ignore
-    return isUndefined(prop) ? config : config[prop];
+  getConfig<
+    P extends EditorConfigKeys | undefined = undefined,
+    R = P extends EditorConfigKeys ? EditorConfig[P] : EditorConfig
+  >(prop?: P): R {
+    return this.em.getConfig(prop);
   }
 
   /**
@@ -406,7 +401,7 @@ export default class EditorModule implements IBaseModule<typeof defaults> {
    *  editor.select(model);
    * });
    */
-  select(el: any, opts: any) {
+  select(el?: Component | Component[], opts?: any) {
     this.em.setSelected(el, opts);
     return this;
   }
@@ -651,7 +646,7 @@ export default class EditorModule implements IBaseModule<typeof defaults> {
    *  return result;
    * });
    */
-  setCustomParserCss(parser: (css: string, editor: EditorModule) => ParsedRule[]) {
+  setCustomParserCss(parser: CustomParserCss) {
     this.Parser.getConfig().parserCss = parser;
     return this;
   }
