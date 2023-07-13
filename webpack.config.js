@@ -30,6 +30,9 @@ export default ({ config }) => ({
       underscore: `${rootDir}/node_modules/underscore`,
     }
   },
+  optimization: {
+    minimize: false,
+  },
   plugins: [
     new webpack.DefinePlugin({ __GJS_VERSION__: `'${pkg.version}'` }),
     ...config.plugins,
