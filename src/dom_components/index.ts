@@ -434,7 +434,7 @@ export default class ComponentManager extends ItemManagerModule {
    * @param {Object} methods Component methods
    * @return {this}
    */
-  addType(type: string, methods: any) {
+  addType(type: string, methods: any, opt: any = {}) {
     const { em } = this;
     const { model = {}, view = {}, isComponent, extend, extendView, extendFn = [], extendFnView = [] } = methods;
     const compType = this.getType(type);
@@ -462,14 +462,23 @@ export default class ComponentManager extends ItemManagerModule {
     if (typeof model === 'object') {
       const defaults = result(model, 'defaults');
       delete model.defaults;
+
+      const extendStaticProps = {
+        isComponent:
+          compType && !extendType && !isComponent
+            ? modelToExt.isComponent
+            : isComponent || (opt.noDummyIsComponent ? null : () => 0),
+      };
+      if (!extendStaticProps.isComponent) {
+        delete extendStaticProps.isComponent;
+      }
+
       methods.model = modelToExt.extend(
         {
           ...model,
           ...getExtendedObj(extendFn, model, modelToExt),
         },
-        {
-          isComponent: compType && !extendType && !isComponent ? modelToExt.isComponent : isComponent || (() => 0),
-        }
+        extendStaticProps
       );
       Object.defineProperty(methods.model.prototype, 'defaults', {
         value: {
