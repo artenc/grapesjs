@@ -39,7 +39,7 @@ export interface DeviceProperties {
  * @property {String} [name=''] Device type, eg. `Mobile`
  * @property {String} [width] Width to set for the editor iframe, eg. '900px'
  * @property {String} [height=''] Height to set for the editor iframe, eg. '600px'
- * @property {String} [widthMedia=''] The width which will be used in media queries, If empty the width will be used
+ * @property {String} [widthMedia=''] The width which will be used in media queries
  * @property {Number} [priority=null] Setup the order of media queries
  */
 export default class Device extends Model<DeviceProperties> {
@@ -56,7 +56,6 @@ export default class Device extends Model<DeviceProperties> {
   }
 
   initialize() {
-    this.get('widthMedia') === null && this.set('widthMedia', this.get('width'));
     this.get('width') === null && this.set('width', this.get('widthMedia'));
 
     if (this.get('widthMedia') && !this.get('mediaCondition')) {
