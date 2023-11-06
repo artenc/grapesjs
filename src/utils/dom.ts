@@ -9,6 +9,10 @@ type vNode = {
 
 type ChildHTML = HTMLElement | string;
 
+type ClassNameInputType = string | number | boolean | null | undefined;
+
+type ClassNameInput = ClassNameInputType | Array<ClassNameInputType>;
+
 const KEY_TAG = 'tag';
 const KEY_ATTR = 'attributes';
 const KEY_CHILD = 'children';
@@ -21,6 +25,11 @@ export const removeEl = (el?: HTMLElement) => {
   const parent = el && el.parentNode;
   parent && parent.removeChild(el);
 };
+
+export function cx(...inputs: ClassNameInput[]): string {
+  const inp = Array.isArray(inputs[0]) ? inputs[0] : [...inputs];
+  return inp.filter(Boolean).join(' ');
+}
 
 export const find = (el: HTMLElement, query: string) => el.querySelectorAll(query);
 
@@ -120,4 +129,18 @@ export const appendVNodes = (node: HTMLElement, vNodes: vNode | vNode[] = []) =>
 
     node.appendChild(el);
   });
+};
+
+/**
+ * Get document scroll coordinates
+ */
+export const getDocumentScroll = (el?: HTMLElement) => {
+  const doc = el?.ownerDocument || document;
+  const docEl = doc.documentElement;
+  const win = doc.defaultView || window;
+
+  return {
+    x: (win.pageXOffset || docEl.scrollLeft || 0) - (docEl.clientLeft || 0),
+    y: (win.pageYOffset || docEl.scrollTop || 0) - (docEl.clientTop || 0),
+  };
 };

@@ -29,6 +29,7 @@
  * ## Methods
  * * [add](#add)
  * * [get](#get)
+ * * [run](#run)
  * * [getAll](#getall)
  * * [remove](#remove)
  * * [getToolbarEl](#gettoolbarel)
@@ -36,22 +37,32 @@
  * @module RichTextEditor
  */
 
-import { on, hasWin } from '../utils/mixins';
-import RichTextEditor, { RichTextEditorAction } from './model/RichTextEditor';
-import defaults, { RichTextEditorConfig } from './config/config';
+import { debounce, isFunction, isString } from 'underscore';
 import { Module } from '../abstract';
-import EditorModel from '../editor/model/Editor';
-import { removeEl } from '../utils/dom';
+import { Debounced, Model } from '../common';
 import ComponentView from '../dom_components/view/ComponentView';
+import EditorModel from '../editor/model/Editor';
+import { createEl, cx, removeEl } from '../utils/dom';
+import { hasWin, isDef, on } from '../utils/mixins';
+import defaults, { CustomRTE, RichTextEditorConfig } from './config/config';
+import RichTextEditor, { RichTextEditorAction } from './model/RichTextEditor';
 
-export type RichTextEditorEvent = 'rte:enable' | 'rte:disable';
+export type RichTextEditorEvent = 'rte:enable' | 'rte:disable' | 'rte:custom';
 
 const eventsUp = 'change:canvasOffset frame:scroll component:update';
 
-export interface CustomRTE<T = any> {
-  enable: (el: HTMLElement, rte: T) => T;
-  disable: (el: HTMLElement, rte: T) => T;
-  destroy?: () => void;
+export const evEnable = 'rte:enable';
+export const evDisable = 'rte:disable';
+export const evCustom = 'rte:custom';
+
+const events = {
+  enable: evEnable,
+  disable: evDisable,
+  custom: evCustom,
+};
+
+interface ModelRTE {
+  currentView?: ComponentView;
 }
 
 export default class RichTextEditorModule extends Module<RichTextEditorConfig & { pStylePrefix?: string }> {
@@ -62,6 +73,9 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
   lastEl?: HTMLElement;
   actions?: (RichTextEditorAction | string)[];
   customRte?: CustomRTE;
+  model: Model<ModelRTE>;
+  __dbdTrgCustom: Debounced;
+  events = events;
 
   /**
    * Get configuration object
@@ -81,19 +95,41 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
 
     this.pfx = config.stylePrefix!;
     this.actions = config.actions || [];
-    if (!hasWin()) return this;
-    const toolbar = document.createElement('div');
-    toolbar.className = `${ppfx}rte-toolbar ${ppfx}one-bg`;
+    const model = new Model();
+    this.model = model;
+    model.on('change:currentView', this.__trgCustom, this);
+    this.__dbdTrgCustom = debounce(() => this.__trgCustom(), 0);
+  }
+
+  onLoad() {
+    if (!hasWin()) return;
+    const { config } = this;
+    const ppfx = config.pStylePrefix;
+    const isCustom = config.custom;
+    const toolbar = createEl('div', {
+      class: cx(`${ppfx}rte-toolbar`, !isCustom && `${ppfx}one-bg ${ppfx}rte-toolbar-ui`),
+    });
     this.toolbar = toolbar;
-    this.initRte(document.createElement('div'));
+    this.initRte(createEl('div'));
 
     //Avoid closing on toolbar clicking
     on(toolbar, 'mousedown', e => e.stopPropagation());
   }
 
+  __trgCustom() {
+    const { model, em, events } = this;
+    em.trigger(events.custom, {
+      enabled: !!model.get('currentView'),
+      container: this.getToolbarEl(),
+      actions: this.getAll(),
+    });
+  }
+
   destroy() {
     this.globalRte?.destroy();
     this.customRte?.destroy?.();
+    this.model.stopListening().clear({ silent: true });
+    this.__dbdTrgCustom.cancel();
     removeEl(this.toolbar);
   }
 
@@ -133,6 +169,7 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
         actions,
         actionbar,
         actionbarContainer: this.toolbar,
+        module: this,
       });
       this.globalRte = globalRte;
     } else {
@@ -266,6 +303,23 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
   }
 
   /**
+   * Run action command.
+   * @param action Action to run
+   * @example
+   * const action = rte.get('bold');
+   * rte.run(action) // or rte.run('bold')
+   */
+  run(action: string | RichTextEditorAction) {
+    const rte = this.globalRte;
+    const actionRes = isString(action) ? this.get(action) : action;
+
+    if (rte && actionRes) {
+      actionRes.result(rte, actionRes);
+      rte.updateActiveActions();
+    }
+  }
+
+  /**
    * Get the toolbar element
    * @return {HTMLElement}
    */
@@ -282,12 +336,16 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
     const un = 'px';
     const canvas = em.Canvas;
     const { style } = toolbar;
-    const pos = canvas.getTargetToElementFixed(this.lastEl, toolbar, {
+    const pos = canvas.getTargetToElementFixed(this.lastEl!, toolbar, {
       event: 'rteToolbarPosUpdate',
       left: 0,
     });
-    style.top = (pos.top || 0) + un;
-    style.left = (pos.left || 0) + un;
+    ['top', 'left', 'bottom', 'right'].forEach(key => {
+      const value = pos[key as keyof typeof pos];
+      if (isDef(value)) {
+        style[key as any] = isString(value) ? value : (value || 0) + un;
+      }
+    });
   }
 
   /**
@@ -299,7 +357,6 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
   async enable(view: ComponentView, rte: RichTextEditor, opts: any = {}) {
     this.lastEl = view.el;
     const { customRte, em } = this;
-    // @ts-ignore
     const el = view.getChildrenContainer();
 
     this.toolbar.style.display = '';
@@ -312,7 +369,19 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
       em.trigger('rte:enable', view, rteInst);
     }
 
+    this.model.set({ currentView: view });
+
     return rteInst;
+  }
+
+  async getContent(view: ComponentView, rte: RichTextEditor) {
+    const { customRte } = this;
+
+    if (customRte && rte && isFunction(customRte.getContent)) {
+      return await customRte.getContent(view.el, rte);
+    } else {
+      return view.getChildrenContainer().innerHTML;
+    }
   }
 
   hideToolbar() {
@@ -347,5 +416,7 @@ export default class RichTextEditorModule extends Module<RichTextEditorConfig & 
       em.off(eventsUp, this.updatePosition, this);
       em.trigger('rte:disable', view, rte);
     }
+
+    this.model.unset('currentView');
   }
 }

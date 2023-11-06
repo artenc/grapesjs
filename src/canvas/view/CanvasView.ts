@@ -1,12 +1,13 @@
 import { bindAll } from 'underscore';
 import { ModuleView } from '../../abstract';
 import { on, off, getElement, getKeyChar, isTextNode, getElRect, getUiClass } from '../../utils/mixins';
-import { createEl } from '../../utils/dom';
+import { createEl, getDocumentScroll } from '../../utils/dom';
 import FramesView from './FramesView';
 import Canvas from '../model/Canvas';
 import FrameView from './FrameView';
 import ComponentView from '../../dom_components/view/ComponentView';
 import Component from '../../dom_components/model/Component';
+import { ElementRect } from '../../common';
 
 export interface MarginPaddingOffsets {
   marginTop?: number;
@@ -19,6 +20,11 @@ export interface MarginPaddingOffsets {
   paddingLeft?: number;
 }
 
+export type ElementPosOpts = {
+  avoidFrameOffset?: boolean;
+  avoidFrameZoom?: boolean;
+  noScroll?: boolean;
+};
 export default class CanvasView extends ModuleView<Canvas> {
   events() {
     return {
@@ -193,14 +199,14 @@ export default class CanvasView extends ModuleView<Canvas> {
    * @param  {HTMLElement} el
    * @return { {top: number, left: number, width: number, height: number} }
    */
-  offset(el?: HTMLElement, opts: any = {}) {
-    const rect = getElRect(el);
-    const docBody = el?.ownerDocument.body;
+  offset(el?: HTMLElement, opts: ElementPosOpts = {}) {
     const { noScroll } = opts;
+    const rect = getElRect(el);
+    const scroll = noScroll ? { x: 0, y: 0 } : getDocumentScroll(el);
 
     return {
-      top: rect.top + (noScroll ? 0 : docBody?.scrollTop ?? 0),
-      left: rect.left + (noScroll ? 0 : docBody?.scrollLeft ?? 0),
+      top: rect.top + scroll.y,
+      left: rect.left + scroll.x,
       width: rect.width,
       height: rect.height,
     };
@@ -243,23 +249,26 @@ export default class CanvasView extends ModuleView<Canvas> {
   /**
    * Returns element's rect info
    * @param {HTMLElement} el
+   * @param {object} opts
    * @return { {top: number, left: number, width: number, height: number, zoom: number, rect: any} }
    * @public
    */
-  getElementPos(el: HTMLElement, opts: any = {}) {
+  getElementPos(el: HTMLElement, opts: ElementPosOpts = {}) {
     const zoom = this.getZoom();
-    const opt = opts || {};
     const frameOffset = this.getFrameOffset(el);
     const canvasEl = this.el;
     const canvasOffset = this.getCanvasOffset();
     const elRect = this.offset(el, opts);
-    const frameTop = opt.avoidFrameOffset ? 0 : frameOffset.top;
-    const frameLeft = opt.avoidFrameOffset ? 0 : frameOffset.left;
+    const frameTop = opts.avoidFrameOffset ? 0 : frameOffset.top;
+    const frameLeft = opts.avoidFrameOffset ? 0 : frameOffset.left;
 
-    const top = elRect.top * zoom + frameTop - canvasOffset.top + canvasEl.scrollTop;
-    const left = elRect.left * zoom + frameLeft - canvasOffset.left + canvasEl.scrollLeft;
-    const height = elRect.height * zoom;
-    const width = elRect.width * zoom;
+    const elTop = opts.avoidFrameZoom ? elRect.top : elRect.top * zoom;
+    const elLeft = opts.avoidFrameZoom ? elRect.left : elRect.left * zoom;
+
+    const top = opts.avoidFrameOffset ? elTop : elTop + frameTop - canvasOffset.top + canvasEl.scrollTop;
+    const left = opts.avoidFrameOffset ? elLeft : elLeft + frameLeft - canvasOffset.left + canvasEl.scrollLeft;
+    const height = opts.avoidFrameZoom ? elRect.height : elRect.height * zoom;
+    const width = opts.avoidFrameZoom ? elRect.width : elRect.width * zoom;
 
     return { top, left, height, width, zoom, rect: elRect };
   }
@@ -296,9 +305,16 @@ export default class CanvasView extends ModuleView<Canvas> {
    * @return { {top: number, left: number, width: number, height: number} } obj Position object
    * @public
    */
-  getPosition(opts: any = {}) {
+  getPosition(opts: any = {}): ElementRect {
     const doc = this.frame?.el.contentDocument;
-    if (!doc) return;
+    if (!doc) {
+      return {
+        top: 0,
+        left: 0,
+        width: 0,
+        height: 0,
+      };
+    }
     const bEl = doc.body;
     const zoom = this.getZoom();
     const fo = this.getFrameOffset();

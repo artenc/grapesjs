@@ -282,20 +282,20 @@ export default {
   setPosition({ x, y, end, position, width, height }: any) {
     const { target, isTran, em } = this;
     const unit = 'px';
-    const en = !end ? 1 : ''; // this will trigger the final change
-    const left = `${x}${unit}`;
-    const top = `${y}${unit}`;
+    const __p = !end; // Indicate if partial change
+    const left = `${parseInt(x, 10)}${unit}`;
+    const top = `${parseInt(y, 10)}${unit}`;
     let styleUp = {};
 
     if (isTran) {
       let transform = target.getStyle()['transform'] || '';
       transform = this.setTranslate(transform, 'x', left);
       transform = this.setTranslate(transform, 'y', top);
-      styleUp = { transform, en };
+      styleUp = { transform, __p };
       target.addStyle(styleUp, { avoidStore: !end });
     } else {
       const adds: any = { position, width, height };
-      const style: any = { left, top, en };
+      const style: any = { left, top, __p };
       keys(adds).forEach(add => {
         const prop = adds[add];
         if (prop) style[add] = prop;
@@ -304,8 +304,7 @@ export default {
       target.addStyle(styleUp, { avoidStore: !end });
     }
 
-    // Update StyleManager properties
-    em.getSelected() && keys(styleUp).forEach(i => em.trigger(`update:component:style:${i}`));
+    em?.Styles.__emitCmpStyleUpdate(styleUp, { components: em.getSelected() });
   },
 
   _getDragData() {

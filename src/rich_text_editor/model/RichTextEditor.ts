@@ -2,6 +2,7 @@
 // and adapted to the GrapesJS's need
 
 import { isString } from 'underscore';
+import RichTextEditorModule from '..';
 import EditorModel from '../../editor/model/Editor';
 import { on, off, getPointerEvent, getModel } from '../../utils/mixins';
 
@@ -14,6 +15,13 @@ export interface RichTextEditorAction {
   update?: (rte: RichTextEditor, action: RichTextEditorAction) => number;
   state?: (rte: RichTextEditor, doc: Document) => number;
   btn?: HTMLElement;
+  currentState?: RichTextEditorActionState;
+}
+
+export enum RichTextEditorActionState {
+  ACTIVE = 1,
+  INACTIVE = 0,
+  DISABLED = -1,
 }
 
 export interface RichTextEditorOptions {
@@ -22,6 +30,7 @@ export interface RichTextEditorOptions {
   actionbar?: HTMLElement;
   actionbarContainer?: HTMLElement;
   styleWithCSS?: boolean;
+  module?: RichTextEditorModule;
 }
 
 type EffectOptions = {
@@ -113,7 +122,7 @@ export default class RichTextEditor {
   em: EditorModel;
   settings: RichTextEditorOptions;
   classes!: Record<string, string>;
-  actionbar!: HTMLElement;
+  actionbar?: HTMLElement;
   actions!: RichTextEditorAction[];
   el!: HTMLElement;
   doc!: Document;
@@ -161,16 +170,23 @@ export default class RichTextEditor {
     this.actions = actions;
 
     if (!actionbar) {
-      const actionbarCont = settings.actionbarContainer;
-      actionbar = document.createElement('div');
-      actionbar.className = classes.actionbar;
-      actionbarCont?.appendChild(actionbar);
-      this.actionbar = actionbar;
+      if (!this.isCustom(settings.module)) {
+        const actionbarCont = settings.actionbarContainer;
+        actionbar = document.createElement('div');
+        actionbar.className = classes.actionbar;
+        actionbarCont?.appendChild(actionbar);
+        this.actionbar = actionbar;
+      }
       actions.forEach(action => this.addAction(action));
     }
 
     settings.styleWithCSS && this.exec('styleWithCSS');
     return this;
+  }
+
+  isCustom(module?: RichTextEditorModule) {
+    const rte = module || this.em.RichTextEditor;
+    return !!(rte?.config.custom || rte?.customRte);
   }
 
   destroy() {}
@@ -181,40 +197,51 @@ export default class RichTextEditor {
   }
 
   updateActiveActions() {
-    this.getActions().forEach(action => {
-      const { update } = action;
-      const btn = action.btn!;
+    const actions = this.getActions();
+    actions.forEach(action => {
+      const { update, btn } = action;
       const { active, inactive, disabled } = this.classes;
       const state = action.state;
       const name = action.name;
       const doc = this.doc;
-      btn.className = btn.className.replace(active, '').trim();
-      btn.className = btn.className.replace(inactive, '').trim();
-      btn.className = btn.className.replace(disabled, '').trim();
+      let currentState = RichTextEditorActionState.INACTIVE;
+
+      if (btn) {
+        btn.className = btn.className.replace(active, '').trim();
+        btn.className = btn.className.replace(inactive, '').trim();
+        btn.className = btn.className.replace(disabled, '').trim();
+      }
 
       // if there is a state function, which depicts the state,
       // i.e. `active`, `disabled`, then call it
       if (state) {
-        switch (state(this, doc)) {
-          case btnState.ACTIVE:
-            btn.className += ` ${active}`;
-            break;
-          case btnState.INACTIVE:
-            btn.className += ` ${inactive}`;
-            break;
-          case btnState.DISABLED:
-            btn.className += ` ${disabled}`;
-            break;
+        const newState = state(this, doc);
+        currentState = newState;
+        if (btn) {
+          switch (newState) {
+            case btnState.ACTIVE:
+              btn.className += ` ${active}`;
+              break;
+            case btnState.INACTIVE:
+              btn.className += ` ${inactive}`;
+              break;
+            case btnState.DISABLED:
+              btn.className += ` ${disabled}`;
+              break;
+          }
         }
       } else {
         // otherwise default to checking if the name command is supported & enabled
         if (doc.queryCommandSupported(name) && doc.queryCommandState(name)) {
-          btn.className += ` ${active}`;
+          btn && (btn.className += ` ${active}`);
+          currentState = RichTextEditorActionState.ACTIVE;
         }
       }
-
+      action.currentState = currentState;
       update?.(this, action);
     });
+
+    actions.length && this.em.RichTextEditor.__dbdTrgCustom();
   }
 
   enable(opts: EffectOptions) {
@@ -229,7 +256,8 @@ export default class RichTextEditor {
   __toggleEffects(enable = false, opts: EffectOptions = {}) {
     const method = enable ? on : off;
     const { el, doc } = this;
-    this.actionbarEl().style.display = enable ? '' : 'none';
+    const actionbar = this.actionbarEl();
+    actionbar && (actionbar.style.display = enable ? '' : 'none');
     el.contentEditable = `${!!enable}`;
     method(el, 'mouseup keyup', this.updateActiveActions);
     method(doc, 'keydown', this.__onKeydown);
@@ -297,11 +325,13 @@ export default class RichTextEditor {
       if (this.actionbar) {
         if (!action.state || (action.state && action.state(this, this.doc) >= 0)) {
           const event = action.event || 'click';
-          // @ts-ignore
-          action.btn[`on${event}`] = () => {
-            action.result(this, action);
-            this.updateActiveActions();
-          };
+          const { btn } = action;
+          if (btn) {
+            (btn as any)[`on${event}`] = () => {
+              action.result(this, action);
+              this.updateActiveActions();
+            };
+          }
         }
       }
     });
@@ -314,23 +344,26 @@ export default class RichTextEditor {
    */
   addAction(action: RichTextEditorAction, opts: { sync?: boolean } = {}) {
     const { sync } = opts;
-    const btn = document.createElement('span');
-    const icon = action.icon;
-    const attr = action.attributes || {};
-    btn.className = this.classes.button;
-    action.btn = btn;
+    const actionbar = this.actionbarEl();
 
-    for (let key in attr) {
-      btn.setAttribute(key, attr[key]);
+    if (actionbar) {
+      const { icon, attributes: attr = {} } = action;
+      const btn = document.createElement('span');
+      btn.className = this.classes.button;
+      action.btn = btn;
+
+      for (let key in attr) {
+        btn.setAttribute(key, attr[key]);
+      }
+
+      if (typeof icon == 'string') {
+        btn.innerHTML = icon;
+      } else {
+        btn.appendChild(icon);
+      }
+
+      actionbar.appendChild(btn);
     }
-
-    if (typeof icon == 'string') {
-      btn.innerHTML = icon;
-    } else {
-      btn.appendChild(icon);
-    }
-
-    this.actionbarEl().appendChild(btn);
 
     if (sync) {
       this.actions.push(action);

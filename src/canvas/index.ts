@@ -402,10 +402,6 @@ export default class CanvasModule extends Module<CanvasConfig> {
       const scroll = top ? scrollTop : scrollLeft;
       const offset = top ? offsetTop : offsetLeft;
 
-      // if (!top) {
-      //   console.log('LEFT', { posLeft: pos[side], scroll, offset }, el);
-      // }
-
       return pos[side] - (scroll - offset) * zoom;
     };
 
@@ -415,41 +411,53 @@ export default class CanvasModule extends Module<CanvasConfig> {
     };
   }
 
-  getTargetToElementFixed(el: any, elToMove: any, opts: any = {}) {
-    const pos = opts.pos || this.getElementPos(el);
-    const cvOff = opts.canvasOff || this.canvasRectOffset(el, pos);
-    const toolbarH = elToMove.offsetHeight || 0;
-    const toolbarW = elToMove.offsetWidth || 0;
-    const elRight = pos.left + pos.width;
-    const cv = this.getCanvasView();
-    const frCvOff = cv.getPosition();
-    const frameOffset = cv.getFrameOffset(el);
+  /**
+   *
+   * @param {HTMLElement} el The component element in the canvas
+   * @param {HTMLElement} targetEl The target element to position (eg. toolbar)
+   * @param {Object} opts
+   * @private
+   */
+  getTargetToElementFixed(el: HTMLElement, targetEl: HTMLElement, opts: any = {}) {
+    const elRect = opts.pos || this.getElementPos(el, { noScroll: true });
+    const canvasOffset = opts.canvasOff || this.canvasRectOffset(el, elRect);
+    const targetHeight = targetEl.offsetHeight || 0;
+    const targetWidth = targetEl.offsetWidth || 0;
+    const elRight = elRect.left + elRect.width;
+    const canvasView = this.getCanvasView();
+    const canvasRect = canvasView.getPosition();
+    const frameOffset = canvasView.getFrameOffset(el);
     const { event } = opts;
 
-    let top = -toolbarH;
-    let left = !isUndefined(opts.left) ? opts.left : pos.width - toolbarW;
-    left = pos.left < -left ? -pos.left : left;
-    const frCvWidth = frCvOff?.width ?? 0;
-    left = elRight > frCvWidth ? left - (elRight - frCvWidth) : left;
+    let top = -targetHeight;
+    let left = !isUndefined(opts.left) ? opts.left : elRect.width - targetWidth;
+    left = elRect.left < -left ? -elRect.left : left;
+    left = elRight > canvasRect.width ? left - (elRight - canvasRect.width) : left;
 
-    // Scroll with the window if the top edge is reached and the
-    // element is bigger than the canvas
-    const fullHeight = pos.height + toolbarH;
-    const elIsShort = fullHeight < frameOffset.height;
+    // Check when the target top edge reaches the top of the viewable canvas
+    if (canvasOffset.top < targetHeight) {
+      const fullHeight = elRect.height + targetHeight;
+      const elIsShort = fullHeight < frameOffset.height;
 
-    if (cvOff.top < toolbarH) {
+      // Scroll with the window if the top edge is reached and the
+      // element is bigger than the canvas
       if (elIsShort) {
         top = top + fullHeight;
       } else {
-        top = -cvOff.top < pos.height ? -cvOff.top : pos.height;
+        top = -canvasOffset.top < elRect.height ? -canvasOffset.top : elRect.height;
       }
     }
 
     const result = {
       top,
       left,
-      canvasOffsetTop: cvOff.top,
-      canvasOffsetLeft: cvOff.left,
+      canvasOffsetTop: canvasOffset.top,
+      canvasOffsetLeft: canvasOffset.left,
+      elRect,
+      canvasOffset,
+      canvasRect,
+      targetWidth,
+      targetHeight,
     };
 
     // In this way I can catch data and also change the position strategy
@@ -574,8 +582,8 @@ export default class CanvasModule extends Module<CanvasConfig> {
    * @example
    * canvas.setZoom(50); // set zoom to 50%
    */
-  setZoom(value: string) {
-    this.canvas.set('zoom', parseFloat(value));
+  setZoom(value: number | string) {
+    this.canvas.set('zoom', typeof value === 'string' ? parseFloat(value) : value);
     return this;
   }
 
