@@ -1,8 +1,9 @@
 import { bindAll, indexOf } from 'underscore';
 import CanvasModule from '../canvas';
+import { ObjectStrings } from '../common';
 import EditorModel from '../editor/model/Editor';
 import { getDocumentScroll } from './dom';
-import { on, off } from './mixins';
+import { off, on } from './mixins';
 
 // TODO move in sorter
 type SorterOptions = {
@@ -83,10 +84,13 @@ export default class Droppable {
     this.over ? this.endDrop(cancel) : this.__customTglEff(false);
   }
 
+  /**
+   * This function is expected to be always executed at the end of d&d.
+   */
   endDrop(cancel?: boolean, ev?: Event) {
     const { em, dragStop } = this;
     this.counter = 0;
-    dragStop && dragStop(cancel);
+    dragStop && dragStop(cancel || !this.over);
     this.__customTglEff(false);
     em.trigger('canvas:dragend', ev);
   }
@@ -103,6 +107,12 @@ export default class Droppable {
   handleDragEnter(ev: DragEvent | Event) {
     const { em, canvas } = this;
     const dt = (ev as DragEvent).dataTransfer;
+    const dragContentOrigin = em.get('dragContent');
+
+    if (!dragContentOrigin && !canvas.getConfig().allowExternalDrop) {
+      return;
+    }
+
     this.updateCounter(1, ev);
     if (this.over) return;
     this.over = true;
@@ -110,7 +120,7 @@ export default class Droppable {
     // For security reason I can't read the drag data on dragenter, but
     // as I need it for the Sorter context I will use `dragContent` or just
     // any not empty element
-    let content = em.get('dragContent') || '<br>';
+    let content = dragContentOrigin || '<br>';
     let dragStop: DragStop;
     let dragContent;
     em.stopDefault();
@@ -129,7 +139,7 @@ export default class Droppable {
           if (!cancelled) {
             comp = wrapper.append(content)[0];
             const canvasOffset = canvas.getOffset();
-            const { top, left, position } = target.getStyle();
+            const { top, left, position } = target.getStyle() as ObjectStrings;
             const scroll = getDocumentScroll(ev.target);
             const postLeft = parseInt(`${parseFloat(left) + scroll.x - canvasOffset.left}`, 10);
             const posTop = parseInt(`${parseFloat(top) + scroll.y - canvasOffset.top}`, 10);

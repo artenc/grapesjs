@@ -1,24 +1,20 @@
-import ParserHtml from 'parser/model/ParserHtml';
-import ParserCss from 'parser/model/ParserCss';
-import DomComponents from 'dom_components';
-import Editor from 'editor/model/Editor';
+import ParserHtml from '../../../../src/parser/model/ParserHtml';
+import ParserCss from '../../../../src/parser/model/ParserCss';
+import DomComponents from '../../../../src/dom_components';
+import Editor from '../../../../src/editor/model/Editor';
+import { CSS_BG_OBJ, CSS_BG_STR } from './ParserCss';
 
 describe('ParserHtml', () => {
-  var obj;
+  let obj: ReturnType<typeof ParserHtml>;
 
   beforeEach(() => {
     const em = new Editor({});
     var dom = new DomComponents(em);
-    obj = new ParserHtml(em, {
+    obj = ParserHtml(em, {
       textTags: ['br', 'b', 'i', 'u'],
-      pStylePrefix: 'gjs-',
-      returnArray: 1,
+      returnArray: true,
     });
-    obj.compTypes = dom.componentTypes;
-  });
-
-  afterEach(() => {
-    obj = null;
+    obj.compTypes = dom.componentTypes as any;
   });
 
   test('Simple div node', () => {
@@ -66,6 +62,16 @@ describe('ParserHtml', () => {
       test: 'value',
     };
     expect(obj.parseStyle(str)).toEqual(result);
+  });
+
+  test('Parse style with multiple values of the same key', () => {
+    expect(obj.parseStyle(CSS_BG_STR)).toEqual(CSS_BG_OBJ);
+  });
+
+  test('Parse style with comments', () => {
+    expect(obj.parseStyle('/* color #ffffff; */ width: 100px;')).toEqual({
+      width: '100px',
+    });
   });
 
   test('Parse class string to array', () => {
@@ -381,7 +387,7 @@ describe('ParserHtml', () => {
         style: { color: 'blue' },
       },
     ];
-    var res = obj.parse(str, new ParserCss());
+    var res = obj.parse(str, ParserCss());
     expect(res.html).toEqual(resHtml);
     expect(res.css).toEqual(resCss);
   });
@@ -424,7 +430,7 @@ describe('ParserHtml', () => {
       },
     ];
 
-    const res = obj.parse(str, new ParserCss());
+    const res = obj.parse(str, ParserCss());
     expect(res.css).toEqual(expected);
   });
 

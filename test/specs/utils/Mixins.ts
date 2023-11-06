@@ -1,4 +1,4 @@
-import { buildBase64UrlFromSvg } from 'utils/mixins';
+import { buildBase64UrlFromSvg } from '../../../src/utils/mixins';
 
 describe('.buildBase64UrlFromSvg', () => {
   it('returns original when a none svg is provided', () => {

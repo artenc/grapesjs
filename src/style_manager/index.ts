@@ -74,10 +74,10 @@ import PropertyFactory from './model/PropertyFactory';
 import SectorsView from './view/SectorsView';
 import { ItemManagerModule } from '../abstract/Module';
 import EditorModel from '../editor/model/Editor';
-import Property, { PropertyProps, StyleProps } from './model/Property';
+import Property, { PropertyProps } from './model/Property';
 import Component from '../dom_components/model/Component';
 import CssRule from '../css_composer/model/CssRule';
-import StyleableModel from '../domain_abstract/model/StyleableModel';
+import StyleableModel, { StyleProps } from '../domain_abstract/model/StyleableModel';
 import { CustomPropertyView } from './view/PropertyView';
 import { PropertySelectProps } from './model/PropertySelect';
 import { PropertyNumberProps } from './model/PropertyNumber';
@@ -114,7 +114,7 @@ export type StyleModuleParam<T extends keyof StyleManager, N extends number> = P
 
 const propDef = (value: any) => value || value === 0;
 
-const events = {
+const stylesEvents = {
   all: evAll,
   sectorAdd: evSectorAdd,
   sectorRemove: evSectorRemove,
@@ -135,6 +135,7 @@ export default class StyleManager extends ItemManagerModule<
   builtIn: PropertyFactory;
   upAll: Debounced;
   properties: typeof Properties;
+  events!: typeof stylesEvents;
   sectors: Sectors;
   SectView!: SectorsView;
   Sector = Sector;
@@ -154,7 +155,7 @@ export default class StyleManager extends ItemManagerModule<
    * @private
    */
   constructor(em: EditorModel) {
-    super(em, 'StyleManager', new Sectors([], { em }), events, defaults);
+    super(em, 'StyleManager', new Sectors([], { em }), stylesEvents, defaults);
     bindAll(this, '__clearStateTarget');
     const c = this.config;
     const ppfx = c.pStylePrefix;

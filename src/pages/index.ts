@@ -76,7 +76,7 @@ export const evPageRemove = `${evPfx}remove`;
 export const evPageRemoveBefore = `${evPageRemove}:before`;
 const chnSel = 'change:selected';
 const typeMain = 'main';
-const events = {
+const pageEvents = {
   all: evAll,
   select: evPageSelect,
   selectBefore: evPageSelectBefore,
@@ -92,6 +92,7 @@ export interface PageManagerConfig extends ModuleConfig {
 }
 
 export default class PageManager extends ItemManagerModule<PageManagerConfig, Pages> {
+  events!: typeof pageEvents;
   storageKey = 'pages';
 
   get pages() {
@@ -120,7 +121,7 @@ export default class PageManager extends ItemManagerModule<PageManagerConfig, Pa
    * @param {Object} config Configurations
    */
   constructor(em: EditorModel) {
-    super(em, 'PageManager', new Pages([], em), events);
+    super(em, 'PageManager', new Pages([], em), pageEvents);
     bindAll(this, '_onPageChange');
     const model = new ModuleModel({ _undo: true } as any);
     this.model = model;
@@ -135,9 +136,10 @@ export default class PageManager extends ItemManagerModule<PageManagerConfig, Pa
   }
 
   onLoad() {
-    const { pages } = this;
+    const { pages, config, em } = this;
     const opt = { silent: true };
-    pages.add(this.config.pages?.map(page => new Page(page, { em: this.em, config: this.config })) || [], opt);
+    const configPages = config.pages?.map(page => new Page(page, { em, config })) || [];
+    pages.add(configPages, opt);
     const mainPage = !pages.length ? this.add({ type: typeMain }, opt) : this.getMain();
     mainPage && this.select(mainPage, opt);
   }

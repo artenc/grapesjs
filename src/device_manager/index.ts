@@ -50,8 +50,7 @@ export const evAddBefore = `${evAdd}:before`;
 export const evRemove = `${evPfx}remove`;
 export const evRemoveBefore = `${evRemove}:before`;
 const chnSel = 'change:device';
-
-const events = {
+const deviceEvents = {
   all: evAll,
   select: evSelect,
   update: evUpdate,
@@ -65,7 +64,7 @@ export default class DeviceManager extends ItemManagerModule<
   Devices
 > {
   devices: Devices;
-
+  events!: typeof deviceEvents;
   view?: DevicesView;
 
   Device = Device;
@@ -75,7 +74,7 @@ export default class DeviceManager extends ItemManagerModule<
   storageKey = '';
 
   constructor(em: EditorModel) {
-    super(em, 'DeviceManager', new Devices(), events, defaults);
+    super(em, 'DeviceManager', new Devices(), deviceEvents, defaults);
     this.devices = this.all;
 
     // --- I need to pass the default mediaCondition config parameter to device

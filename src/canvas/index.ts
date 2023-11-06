@@ -49,15 +49,21 @@
 
 import { isUndefined } from 'underscore';
 import { Module } from '../abstract';
+import { Coordinates } from '../common';
+import Component from '../dom_components/model/Component';
 import EditorModel from '../editor/model/Editor';
 import { getElement, getViewEl } from '../utils/mixins';
 import defaults, { CanvasConfig } from './config/config';
 import Canvas from './model/Canvas';
 import Frame from './model/Frame';
-import CanvasView from './view/CanvasView';
+import CanvasView, { FitViewportOptions } from './view/CanvasView';
 import FrameView from './view/FrameView';
 
 export type CanvasEvent = 'canvas:dragenter' | 'canvas:dragover' | 'canvas:drop' | 'canvas:dragend' | 'canvas:dragdata';
+
+export interface ToWorldOption {
+  toWorld?: boolean;
+}
 
 export default class CanvasModule extends Module<CanvasConfig> {
   /**
@@ -95,7 +101,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
     return this;
   }
 
-  onLoad() {
+  postLoad() {
     this.model.init();
   }
 
@@ -606,8 +612,27 @@ export default class CanvasModule extends Module<CanvasConfig> {
    * @example
    * canvas.setCoords(100, 100);
    */
-  setCoords(x: string, y: string) {
-    this.canvas.set({ x: parseFloat(x), y: parseFloat(y) });
+  setCoords(x?: string | number, y?: string | number, opts: ToWorldOption = {}) {
+    const hasX = x || x === 0;
+    const hasY = y || y === 0;
+    const coords = {
+      x: this.canvas.get('x'),
+      y: this.canvas.get('y'),
+    };
+
+    if (hasX) coords.x = parseFloat(`${x}`);
+    if (hasY) coords.y = parseFloat(`${y}`);
+
+    if (opts.toWorld) {
+      const delta = this.canvasView?.getViewportDelta();
+      if (delta) {
+        if (hasX) coords.x = coords.x - delta.x;
+        if (hasY) coords.y = coords.y - delta.y;
+      }
+    }
+
+    this.canvas.set(coords);
+
     return this;
   }
 
@@ -619,7 +644,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
    * const coords = canvas.getCoords();
    * // { x: 100, y: 100 }
    */
-  getCoords(): { x: number; y: number } {
+  getCoords(): Coordinates {
     const { x, y } = this.canvas.attributes;
     return { x, y };
   }
@@ -631,6 +656,10 @@ export default class CanvasModule extends Module<CanvasConfig> {
   getZoomMultiplier() {
     const zoom = this.getZoomDecimal();
     return zoom ? 1 / zoom : 1;
+  }
+
+  fitViewport(opts?: FitViewportOptions) {
+    this.canvasView?.fitViewport(opts);
   }
 
   toggleFramesEvents(on: boolean) {
@@ -666,6 +695,14 @@ export default class CanvasModule extends Module<CanvasConfig> {
    */
   addFrame(props = {}, opts = {}) {
     return this.canvas.frames.add(new Frame(this, { ...props }), opts);
+  }
+
+  /**
+   * Get the last created Component from a drag & drop to the canvas.
+   * @returns {[Component]|undefined}
+   */
+  getLastDragResult(): Component | undefined {
+    return this.em.get('dragResult');
   }
 
   destroy() {

@@ -1,13 +1,15 @@
-import { bindAll } from 'underscore';
+import { bindAll, isNumber } from 'underscore';
 import { ModuleView } from '../../abstract';
-import { on, off, getElement, getKeyChar, isTextNode, getElRect, getUiClass } from '../../utils/mixins';
-import { createEl, getDocumentScroll } from '../../utils/dom';
-import FramesView from './FramesView';
-import Canvas from '../model/Canvas';
-import FrameView from './FrameView';
-import ComponentView from '../../dom_components/view/ComponentView';
+import { BoxRect, Coordinates, ElementRect } from '../../common';
 import Component from '../../dom_components/model/Component';
-import { ElementRect } from '../../common';
+import ComponentView from '../../dom_components/view/ComponentView';
+import { createEl, getDocumentScroll } from '../../utils/dom';
+import { getElRect, getElement, getKeyChar, getUiClass, getViewEl, isTextNode, off, on } from '../../utils/mixins';
+import Canvas from '../model/Canvas';
+import Frame from '../model/Frame';
+import FrameView from './FrameView';
+import FramesView from './FramesView';
+import { ToWorldOption } from '..';
 
 export interface MarginPaddingOffsets {
   marginTop?: number;
@@ -25,6 +27,14 @@ export type ElementPosOpts = {
   avoidFrameZoom?: boolean;
   noScroll?: boolean;
 };
+
+export interface FitViewportOptions {
+  frame?: Frame;
+  gap?: number | { x: number; y: number };
+  ignoreHeight?: boolean;
+  el?: HTMLElement;
+}
+
 export default class CanvasView extends ModuleView<Canvas> {
   events() {
     return {
@@ -162,13 +172,9 @@ export default class CanvasView extends ModuleView<Canvas> {
   }
 
   updateFrames(ev: Event) {
-    const { em, model } = this;
-    const { x, y } = model.attributes;
-    const zoom = this.getZoom();
+    const { em } = this;
     const defOpts = { preserveSelected: 1 };
-    const mpl = zoom ? 1 / zoom : 1;
-    //@ts-ignore
-    this.framesArea.style.transform = `scale(${zoom}) translate(${x * mpl}px, ${y * mpl}px)`;
+    this.updateFramesArea();
     this.clearOff();
     em.stopDefault(defOpts);
     em.trigger('canvas:update', ev);
@@ -176,8 +182,74 @@ export default class CanvasView extends ModuleView<Canvas> {
     this.timerZoom = setTimeout(() => em.runDefault(defOpts), 300) as any;
   }
 
-  getZoom() {
-    return this.em.getZoomDecimal();
+  updateFramesArea() {
+    const { framesArea, model, module } = this;
+
+    if (framesArea) {
+      const { x, y } = model.attributes;
+      const zoomDc = module.getZoomDecimal();
+      const mpl = module.getZoomMultiplier();
+
+      framesArea.style.transform = `scale(${zoomDc}) translate(${x * mpl}px, ${y * mpl}px)`;
+    }
+  }
+
+  fitViewport(opts: FitViewportOptions = {}) {
+    const { em, module, model } = this;
+    const canvasRect = this.getCanvasOffset();
+    const { el } = opts;
+    const elFrame = el && (getViewEl(el).frameView as FrameView);
+    const frame = elFrame ? elFrame.model : opts.frame || em.getCurrentFrameModel() || model.frames.at(0);
+    const { x, y } = frame.attributes;
+    const boxRect: BoxRect = {
+      x: x ?? 0,
+      y: y ?? 0,
+      width: frame.width,
+      height: frame.height,
+    };
+
+    if (el) {
+      const elRect = this.getElBoxRect(el);
+      boxRect.x = boxRect.x + elRect.x;
+      boxRect.y = boxRect.y + elRect.y;
+      boxRect.width = elRect.width;
+      boxRect.height = elRect.height;
+    }
+
+    const noHeight = opts.ignoreHeight;
+    const gap = opts.gap ?? 0;
+    const gapIsNum = isNumber(gap);
+    const gapX = gapIsNum ? gap : gap.x;
+    const gapY = gapIsNum ? gap : gap.y;
+    const boxWidth = boxRect.width + gapX * 2;
+    const boxHeight = boxRect.height + gapY * 2;
+    const canvasWidth = canvasRect.width;
+    const canvasHeight = canvasRect.height;
+    const widthRatio = canvasWidth / boxWidth;
+    const heightRatio = canvasHeight / boxHeight;
+
+    const zoomRatio = noHeight ? widthRatio : Math.min(widthRatio, heightRatio);
+    const zoom = zoomRatio * 100;
+    module.setZoom(zoom);
+
+    // check for the frame witdh is necessary as we're centering the frame via CSS
+    const coordX = -boxRect.x + (frame.width >= canvasWidth ? canvasWidth / 2 - boxWidth / 2 : -gapX);
+    const coordY = -boxRect.y + canvasHeight / 2 - boxHeight / 2;
+
+    const coords = {
+      x: (coordX + gapX) * zoomRatio,
+      y: (coordY + gapY) * zoomRatio,
+    };
+
+    if (noHeight) {
+      const zoomMltp = module.getZoomMultiplier();
+      const canvasWorldHeight = canvasHeight * zoomMltp;
+      const canvasHeightDiff = canvasWorldHeight - canvasHeight;
+      const yDelta = canvasHeightDiff / 2;
+      coords.y = (-boxRect.y + gapY) * zoomRatio - yDelta / zoomMltp;
+    }
+
+    module.setCoords(coords.x, coords.y);
   }
 
   /**
@@ -209,6 +281,57 @@ export default class CanvasView extends ModuleView<Canvas> {
       left: rect.left + scroll.x,
       width: rect.width,
       height: rect.height,
+    };
+  }
+
+  getElBoxRect(el: HTMLElement): BoxRect {
+    const { width, height, left, top } = getElRect(el);
+    return {
+      x: left,
+      y: top,
+      width,
+      height,
+    };
+  }
+
+  getViewportRect(opts: ToWorldOption = {}): BoxRect {
+    const { top, left, width, height } = this.getCanvasOffset();
+    const { module } = this;
+
+    if (opts.toWorld) {
+      const zoom = module.getZoomMultiplier();
+      const coords = module.getCoords();
+      const vwDelta = this.getViewportDelta();
+      const x = -coords.x - vwDelta.x || 0;
+      const y = -coords.y - vwDelta.y || 0;
+
+      return {
+        x: x * zoom,
+        y: y * zoom,
+        width: width * zoom,
+        height: height * zoom,
+      };
+    } else {
+      return {
+        x: left,
+        y: top,
+        width,
+        height,
+      };
+    }
+  }
+
+  getViewportDelta(): Coordinates {
+    const zoom = this.module.getZoomMultiplier();
+    const { width, height } = this.getCanvasOffset();
+    const worldWidth = width * zoom;
+    const worldHeight = height * zoom;
+    const widthDelta = worldWidth - width;
+    const heightDelta = worldHeight - height;
+
+    return {
+      x: widthDelta / 2 / zoom,
+      y: heightDelta / 2 / zoom,
     };
   }
 
@@ -254,7 +377,7 @@ export default class CanvasView extends ModuleView<Canvas> {
    * @public
    */
   getElementPos(el: HTMLElement, opts: ElementPosOpts = {}) {
-    const zoom = this.getZoom();
+    const zoom = this.module.getZoomDecimal();
     const frameOffset = this.getFrameOffset(el);
     const canvasEl = this.el;
     const canvasOffset = this.getCanvasOffset();
@@ -283,6 +406,7 @@ export default class CanvasView extends ModuleView<Canvas> {
     if (!el || isTextNode(el)) return {};
     const result: MarginPaddingOffsets = {};
     const styles = window.getComputedStyle(el);
+    const zoom = this.module.getZoomDecimal();
     const marginPaddingOffsets: (keyof MarginPaddingOffsets)[] = [
       'marginTop',
       'marginRight',
@@ -294,7 +418,7 @@ export default class CanvasView extends ModuleView<Canvas> {
       'paddingLeft',
     ];
     marginPaddingOffsets.forEach(offset => {
-      result[offset] = parseFloat(styles[offset]) * this.getZoom();
+      result[offset] = parseFloat(styles[offset]) * zoom;
     });
 
     return result;
@@ -316,7 +440,7 @@ export default class CanvasView extends ModuleView<Canvas> {
       };
     }
     const bEl = doc.body;
-    const zoom = this.getZoom();
+    const zoom = this.module.getZoomDecimal();
     const fo = this.getFrameOffset();
     const co = this.getCanvasOffset();
     const { noScroll } = opts;
@@ -390,6 +514,11 @@ export default class CanvasView extends ModuleView<Canvas> {
     em.setCurrentFrame(currFrame);
     framesArea?.appendChild(frames.el);
     this.frame = currFrame;
+    this.updateFramesArea();
+  }
+
+  renderFrames() {
+    this._renderFrames();
   }
 
   render() {

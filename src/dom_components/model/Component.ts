@@ -12,7 +12,7 @@ import {
   keys,
 } from 'underscore';
 import { shallowDiff, capitalize, isEmptyObj, isObject, toLowerCase } from '../../utils/mixins';
-import StyleableModel from '../../domain_abstract/model/StyleableModel';
+import StyleableModel, { StyleProps } from '../../domain_abstract/model/StyleableModel';
 import { Model } from 'backbone';
 import Components from './Components';
 import Selector from '../../selector_manager/model/Selector';
@@ -43,7 +43,7 @@ const escapeRegExp = (str: string) => {
   return str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
 };
 
-const avoidInline = (em: EditorModel) => !!em?.getConfig().avoidInlineStyle;
+export const avoidInline = (em: EditorModel) => !!em?.getConfig().avoidInlineStyle;
 
 export const eventDrag = 'component:drag';
 export const keySymbols = '__symbols';
@@ -168,6 +168,10 @@ export default class Component extends StyleableModel<ComponentProperties> {
 
   get traits() {
     return this.get('traits')!;
+  }
+
+  get content() {
+    return this.get('content') ?? '';
   }
 
   /**
@@ -589,7 +593,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @example
    * component.setStyle({ color: 'red' });
    */
-  setStyle(prop: ObjectStrings = {}, opts: any = {}) {
+  setStyle(prop: StyleProps = {}, opts: any = {}) {
     const { opt, em } = this;
 
     if (avoidInline(em) && !opt.temporary && !opts.inline) {
@@ -599,13 +603,12 @@ export default class Component extends StyleableModel<ComponentProperties> {
       const state = em.get('state');
       const cc = em.Css;
       const propOrig = this.getStyle(opts);
-      this.rule = cc.setIdRule(this.getId(), prop, { ...opts, state });
+      this.rule = cc.setIdRule(this.getId(), prop, { state, ...opts });
       const diff = shallowDiff(propOrig, prop);
       this.set('style', '', { silent: true });
       keys(diff).forEach(pr => this.trigger(`change:style:${pr}`));
     } else {
-      // @ts-ignore
-      prop = super.setStyle.apply(this, arguments);
+      prop = super.setStyle.apply(this, arguments as any);
     }
 
     return prop;
@@ -1593,7 +1596,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
 
   __innerHTML(opts: ToHTMLOptions = {}) {
     const cmps = this.components();
-    return !cmps.length ? this.get('content') : cmps.map(c => c.toHTML(opts)).join('');
+    return !cmps.length ? this.content : cmps.map(c => c.toHTML(opts)).join('');
   }
 
   /**

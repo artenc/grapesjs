@@ -355,7 +355,8 @@ export default class EditorModel extends Model {
       undoManager: false,
     });
     // We only need to load a few modules
-    ['PageManager', 'Canvas'].forEach(key => shallow.get(key).onLoad());
+    shallow.Pages.onLoad();
+    shallow.Canvas.postLoad();
     this.set('shallow', shallow);
   }
 
@@ -917,12 +918,12 @@ export default class EditorModel extends Model {
     return this.set('currentFrame', frameView);
   }
 
-  getCurrentFrame(): FrameView {
+  getCurrentFrame(): FrameView | undefined {
     return this.get('currentFrame');
   }
 
-  getCurrentFrameModel(): Frame {
-    return (this.getCurrentFrame() || {}).model;
+  getCurrentFrameModel() {
+    return (this.getCurrentFrame() || {})?.model;
   }
 
   getIcon(icon: string) {
