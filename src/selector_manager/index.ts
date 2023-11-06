@@ -20,7 +20,7 @@
  *
  * So, for example, being `btn` the same class entity it'll be easier to refactor and track things.
  *
- * You can customize the initial state of the module from the editor initialization, by passing the following [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/selector_manager/config/config.ts)
+ * You can customize the initial state of the module from the editor initialization, by passing the following [Configuration Object](https://github.com/GrapesJS/grapesjs/blob/master/src/selector_manager/config/config.ts)
  * ```js
  * const editor = grapesjs.init({
  *  selectorManager: {
@@ -52,6 +52,7 @@
  * * [add](#add)
  * * [get](#get)
  * * [remove](#remove)
+ * * [rename](#rename)
  * * [getAll](#getall)
  * * [setState](#setstate)
  * * [getState](#getstate)
@@ -74,7 +75,7 @@
 
 import { isString, debounce, isObject, isArray, bindAll } from 'underscore';
 import { isComponent, isRule } from '../utils/mixins';
-import { Model, Collection, RemoveOptions, Debounced } from '../common';
+import { Model, Collection, RemoveOptions, SetOptions, Debounced } from '../common';
 import defaults, { SelectorManagerConfig } from './config/config';
 import Selector from './model/Selector';
 import Selectors from './model/Selectors';
@@ -85,6 +86,7 @@ import Component from '../dom_components/model/Component';
 import { ItemManagerModule } from '../abstract/Module';
 import { StyleModuleParam } from '../style_manager';
 import StyleableModel from '../domain_abstract/model/StyleableModel';
+import CssRule from '../css_composer/model/CssRule';
 
 export type SelectorEvent = 'selector:add' | 'selector:remove' | 'selector:update' | 'selector:state' | 'selector';
 
@@ -330,6 +332,23 @@ export default class SelectorManager extends ItemManagerModule<SelectorManagerCo
   }
 
   /**
+   * Rename Selector.
+   * @param {[Selector]} selector Selector to update.
+   * @param {String} name New name for the selector.
+   * @returns {[Selector]} Selector containing the passed name.
+   * @example
+   * const selector = selectorManager.get('myclass');
+   * const result = selectorManager.rename(selector, 'myclass2');
+   * console.log(result === selector ? 'Selector updated' : 'Selector with this name exists already');
+   */
+  rename(selector: Selector, name: string, opts?: SetOptions) {
+    const newName = this.escapeName(name);
+    const result = this.get(newName);
+
+    return result || selector.set({ name: newName, label: name }, opts);
+  }
+
+  /**
    * Change the selector state
    * @param {String} value State value
    * @returns {this}
@@ -404,7 +423,6 @@ export default class SelectorManager extends ItemManagerModule<SelectorManagerCo
    */
   addSelected(props: SelectorStringObject) {
     const added = this.add(props);
-    // TODO: target should be the one from StyleManager
     this.em.getSelectedAll().forEach(target => {
       target.getSelectors().add(added);
     });
@@ -421,6 +439,34 @@ export default class SelectorManager extends ItemManagerModule<SelectorManagerCo
     this.em.getSelectedAll().forEach(trg => {
       !selector.get('protected') && trg && trg.getSelectors().remove(selector);
     });
+  }
+
+  duplicateSelected(selector: Selector, opts: { suffix?: string } = {}) {
+    const { em } = this;
+    const commonSelectors = this.getSelected();
+    if (commonSelectors.indexOf(selector) < 0) return;
+
+    const state = this.getState();
+    const media = em.getCurrentMedia();
+    const rule = em.Css.get(commonSelectors, state, media);
+    const styleToApply = rule?.getStyle();
+
+    em.getSelectedAll().forEach(component => {
+      const selectors = component.getSelectors();
+      if (selectors.includes(selector)) {
+        const suffix = opts.suffix || ' copy';
+        const label = selector.getLabel();
+        const newSelector = this.addSelector(`${label}${suffix}`);
+        const at = selectors.indexOf(selector);
+        selectors.remove(selector);
+        selectors.add(newSelector, { at });
+      }
+    });
+
+    if (styleToApply) {
+      const newRule = em.Css.add(this.getSelected(), state, media);
+      newRule.setStyle(styleToApply);
+    }
   }
 
   /**

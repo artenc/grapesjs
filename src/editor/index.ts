@@ -1,6 +1,6 @@
 /**
  * Editor contains the top level API which you'll probably use to customize the editor or extend it with plugins.
- * You get the Editor instance on init method and you can pass options via its [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/editor/config/config.ts)
+ * You get the Editor instance on init method and you can pass options via its [Configuration Object](https://github.com/GrapesJS/grapesjs/blob/master/src/editor/config/config.ts)
  *
  * ```js
  * const editor = grapesjs.init({
@@ -69,6 +69,7 @@ import ComponentManager, { ComponentEvent } from '../dom_components';
 import Component from '../dom_components/model/Component';
 import Components from '../dom_components/model/Components';
 import ComponentWrapper from '../dom_components/model/ComponentWrapper';
+import { DragMode } from '../dom_components/model/types';
 import I18nModule from '../i18n';
 import KeymapsModule, { KeymapEvent } from '../keymaps';
 import ModalModule, { ModalEvent } from '../modal_dialog';
@@ -118,14 +119,14 @@ type EditorConfigType = EditorConfig & { pStylePrefix?: string };
 
 type EditorModelParam<T extends keyof EditorModel, N extends number> = Parameters<EditorModel[T]>[N];
 
+export type EditorParam<T extends keyof Editor, N extends number> = Parameters<Editor[T]>[N];
+
 export default class Editor implements IBaseModule<EditorConfig> {
   editorView?: EditorView;
   editor: EditorModel;
   $: any;
   em: EditorModel;
   config: EditorConfigType;
-
-  modules = [];
 
   constructor(config: EditorConfig = {}, opts: any = {}) {
     this.config = {
@@ -678,11 +679,11 @@ export default class Editor implements IBaseModule<EditorConfig> {
 
   /**
    * Change the global drag mode of components.
-   * To get more about this feature read: https://github.com/artf/grapesjs/issues/1936
+   * To get more about this feature read: https://github.com/GrapesJS/grapesjs/issues/1936
    * @param {String} value Drag mode, options: 'absolute' | 'translate'
    * @returns {this}
    */
-  setDragMode(value: string) {
+  setDragMode(value: DragMode) {
     this.em.setDragMode(value);
     return this;
   }

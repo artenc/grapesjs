@@ -43,7 +43,7 @@ const editor = grapesjs.init({
 });
 ```
 
-Check the full list of available options here: [Storage Manager Config](https://github.com/artf/grapesjs/blob/master/src/storage_manager/config/config.js)
+Check the full list of available options here: [Storage Manager Config](https://github.com/GrapesJS/grapesjs/blob/master/src/storage_manager/config/config.ts)
 
 
 
@@ -287,7 +287,7 @@ Storage.add('remote-local', {
 
 You can also replace already defined storages with other implementations by passing the same storage type in the `Storage.add` method. You can switch, for example, the default `local`, which relies on [localStorage API], with something more scalable like [IndexedDB  API].
 
-It might also be possible that you're already using some HTTP client library (eg. [axios](https://github.com/axios/axios)) which handles for you all the necessary HTTP headers in your application (CSRF token, session data, etc.), so you can simply replace the default `remote` storage wiht your implemenation of choice without caring about the default configurations.
+It might also be possible that you're already using some HTTP client library (eg. [axios](https://github.com/axios/axios)) which handles for you all the necessary HTTP headers in your application (CSRF token, session data, etc.), so you can simply replace the default `remote` storage with your implementation of choice without caring about the default configurations.
 
 ```js
 editor.Storage.add('remote', {
@@ -443,8 +443,8 @@ For a complete list of available events, you can check it [here](/api/storage_ma
 
 
 
-[grapesjs-indexeddb]: <https://github.com/artf/grapesjs-indexeddb>
-[grapesjs-firestore]: <https://github.com/artf/grapesjs-firestore>
+[grapesjs-indexeddb]: <https://github.com/GrapesJS/storage-indexeddb>
+[grapesjs-firestore]: <https://github.com/GrapesJS/storage-firestore>
 [localStorage API]: <https://developer.mozilla.org/it/docs/Web/API/Window/localStorage>
 [IndexedDB  API]: <https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API>
 [json-server]: <https://github.com/typicode/json-server>

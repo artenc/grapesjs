@@ -113,13 +113,19 @@ Returns **[Number][9]**
 ## setDragMode
 
 Change the drag mode of the component.
-To get more about this feature read: [https://github.com/artf/grapesjs/issues/1936][10]
+To get more about this feature read: [https://github.com/GrapesJS/grapesjs/issues/1936][10]
 
 ### Parameters
 
-*   `value` **[String][1]** Drag mode, options: 'absolute' | 'translate'
+*   `value` **[String][1]** Drag mode, options: `'absolute'` | `'translate'` | `''`
 
 Returns **this** 
+
+## getDragMode
+
+Get the drag mode of the component.
+
+Returns **[String][1]** Drag mode value, options: `'absolute'` | `'translate'` | `''`
 
 ## find
 
@@ -619,7 +625,13 @@ Returns **[Array][5]\<Trait>** Array of added traits
 
 ## getName
 
-Get the name of the component
+Get the name of the component.
+
+### Parameters
+
+*   `opts` **[Object][2]** Options (optional, default `{}`)
+
+    *   `opts.noCustom` **[Boolean][3]?** Avoid custom name assigned to the component.
 
 Returns **[String][1]** 
 
@@ -829,7 +841,7 @@ Returns **[Boolean][3]**
 
 [5]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
 
-[6]: https://github.com/artf/grapesjs/blob/master/src/utils/Resizer.js
+[6]: https://github.com/GrapesJS/grapesjs/blob/master/src/utils/Resizer.js
 
 [7]: /modules/Components-js.html
 
@@ -837,6 +849,6 @@ Returns **[Boolean][3]**
 
 [9]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
 
-[10]: https://github.com/artf/grapesjs/issues/1936
+[10]: https://github.com/GrapesJS/grapesjs/issues/1936
 
 [11]: https://developer.mozilla.org/docs/Web/HTML/Element

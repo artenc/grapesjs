@@ -102,7 +102,6 @@ export default class ClassTagsView extends View<Selector> {
 
   syncStyle() {
     const { em } = this;
-
     const opts = { noDisabled: 1, noFixed: 1 };
     const selectors = this.getCommonSelectors({ opts });
 

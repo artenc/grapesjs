@@ -8,7 +8,7 @@ import Selected from './Selected';
 import FrameView from '../../canvas/view/FrameView';
 import Editor from '..';
 import EditorView from '../view/EditorView';
-import Module from '../../abstract/Module';
+import { ILoadableModule, IModule, IStorableModule } from '../../abstract/Module';
 import CanvasModule from '../../canvas';
 import ComponentManager from '../../dom_components';
 import CssComposer from '../../css_composer';
@@ -40,10 +40,11 @@ import ComponentView from '../../dom_components/view/ComponentView';
 import { ProjectData } from '../../storage_manager/model/IStorage';
 import CssRules from '../../css_composer/model/CssRules';
 import Frame from '../../canvas/model/Frame';
+import { DragMode } from '../../dom_components/model/types';
 
 Backbone.$ = $;
 
-const deps: (new (em: EditorModel) => Module)[] = [
+const deps: (new (em: EditorModel) => IModule)[] = [
   UtilsModule,
   I18nModule,
   KeymapsModule,
@@ -57,19 +58,19 @@ const deps: (new (em: EditorModel) => Module)[] = [
   CodeManagerModule,
   PanelManager,
   RichTextEditorModule,
-  AssetManager,
-  CssComposer,
-  PageManager,
   TraitManager,
-  ComponentManager,
   LayerManager,
   CanvasModule,
   CommandsModule,
   BlockManager,
 ];
+const storableDeps: (new (em: EditorModel) => IModule & IStorableModule)[] = [
+  AssetManager,
+  CssComposer,
+  PageManager,
+  ComponentManager,
+];
 const depsByName: any = {};
-
-const ts_deps: any[] = [];
 
 Extender({ $ });
 
@@ -102,20 +103,21 @@ export default class EditorModel extends Model {
   defaultRunning = false;
   destroyed = false;
   _config: EditorConfig;
+  _storageTimeout?: ReturnType<typeof setTimeout>;
   attrsOrig: any;
-  timedInterval?: number;
-  updateItr?: number;
+  timedInterval?: ReturnType<typeof setTimeout>;
+  updateItr?: ReturnType<typeof setTimeout>;
   view?: EditorView;
 
-  get storables(): any[] {
+  get storables(): IStorableModule[] {
     return this.get('storables');
   }
 
-  get modules(): Module[] {
+  get modules(): IModule[] {
     return this.get('modules');
   }
 
-  get toLoad(): any[] {
+  get toLoad(): ILoadableModule[] {
     return this.get('toLoad');
   }
 
@@ -250,11 +252,14 @@ export default class EditorModel extends Model {
     }
 
     // Load modules
-    deps.forEach(dep => {
-      const mod = this.loadModule(dep);
-      depsByName[mod.name] = dep;
+    deps.forEach(constr => {
+      const mod = this.loadModule(constr);
+      depsByName[mod.name] = constr;
     });
-    ts_deps.forEach(name => this.tsLoadModule(name));
+    storableDeps.forEach(constr => {
+      const mod = this.loadStorableModule(constr);
+      depsByName[mod.name] = constr;
+    });
     this.on('change:componentHovered', this.componentHovered, this);
     this.on('change:changesCount', this.updateChanges, this);
     this.on('change:readyLoad change:readyCanvas', this._checkReady, this);
@@ -314,7 +319,7 @@ export default class EditorModel extends Model {
     const sm = this.get('StorageManager');
 
     // In `onLoad`, the module will try to load the data from its configurations.
-    this.toLoad.forEach(mdl => mdl.onLoad());
+    this.toLoad.reverse().forEach(mdl => mdl.onLoad());
 
     // Stuff to do post load
     const postLoad = () => {
@@ -327,7 +332,7 @@ export default class EditorModel extends Model {
       postLoad();
     } else {
       // Defer for storage load events.
-      setTimeout(async () => {
+      this._storageTimeout = setTimeout(async () => {
         if (projectData) {
           this.loadData(projectData);
         } else if (sm?.canAutoload()) {
@@ -362,7 +367,6 @@ export default class EditorModel extends Model {
     const stm = this.get('StorageManager');
     const changes = this.getDirtyCount();
     this.updateItr && clearTimeout(this.updateItr);
-    //@ts-ignore
     this.updateItr = setTimeout(() => this.trigger('update'));
 
     if (this.config.noticeOnUnload) {
@@ -376,67 +380,21 @@ export default class EditorModel extends Model {
 
   /**
    * Load generic module
-   * @param {String} moduleName Module name
-   * @return {this}
-   * @private
    */
-  loadModule(Module: any) {
-    const Mod = this.initModule(Module);
-
-    // Bind the module to the editor model if public
-    !Mod.private && this.set(Mod.name, Mod);
-    Mod.onLoad && this.toLoad.push(Mod);
+  private loadModule(InitModule: new (em: EditorModel) => IModule) {
+    const Mod = new InitModule(this);
+    this.set(Mod.name, Mod);
+    Mod.onLoad && this.toLoad.push(Mod as ILoadableModule);
     this.modules.push(Mod);
-
     return Mod;
   }
 
-  initModule(moduleOrName: any, opt: any = {}) {
-    const { config } = this;
-    const Module = typeof moduleOrName == 'string' ? depsByName[moduleOrName] : moduleOrName;
-    const Mod = new Module(this);
-    const name = (Mod.name.charAt(0).toLowerCase() + Mod.name.slice(1)) as EditorConfigKeys;
-    const cfgParent = !isUndefined(config[name]) ? config[name] : config[Mod.name as EditorConfigKeys];
-    const cfg = (cfgParent === true ? {} : cfgParent || {}) as Record<string, any>;
-    cfg.pStylePrefix = config.pStylePrefix || '';
-
-    if (!isUndefined(cfgParent) && !cfgParent) {
-      cfg._disable = 1;
-    }
-
-    if (Mod.storageKey && Mod.store && Mod.load) {
-      this.storables.push(Mod);
-    }
-
-    cfg.em = this;
-    Mod.init({
-      ...cfg,
-      ...opt.config,
-    });
-
+  private loadStorableModule(InitModule: new (em: EditorModel) => IModule & IStorableModule) {
+    const Mod = this.loadModule(InitModule) as IModule & IStorableModule;
+    this.storables.push(Mod);
     return Mod;
   }
 
-  /**
-   * Load generic module
-   * @param {String} moduleName Module name
-   * @return {this}
-   * @private
-   */
-  tsLoadModule(moduleName: any) {
-    const Module = moduleName.default || moduleName;
-    const Mod = new Module(this);
-
-    if (Mod.storageKey && Mod.store && Mod.load) {
-      this.storables.push(Mod);
-    }
-
-    // Bind the module to the editor model if public
-    !Mod.private && this.set(Mod.name, Mod);
-    Mod.onLoad && this.toLoad.push(Mod);
-    this.modules.push(Mod);
-    return this;
-  }
   /**
    * Initialize editor model and set editor instance
    * @param {Editor} editor Editor instance
@@ -470,7 +428,6 @@ export default class EditorModel extends Model {
     }
 
     this.timedInterval && clearTimeout(this.timedInterval);
-    //@ts-ignore
     this.timedInterval = setTimeout(() => {
       const curr = this.getDirtyCount() || 0;
       const { unset, ...opts } = opt;
@@ -840,7 +797,7 @@ export default class EditorModel extends Model {
     };
 
     const data = this.storeData();
-    await this.get('StorageManager').store(data, options);
+    await this.Storage.store(data, options);
     if (!options.preventResetChanges) {
       this.clearDirtyCount();
     }
@@ -993,8 +950,13 @@ export default class EditorModel extends Model {
     return this.get('Canvas').getZoomMultiplier();
   }
 
-  setDragMode(value: string) {
+  setDragMode(value: DragMode) {
     return this.set('dmode', value);
+  }
+
+  getDragMode(component?: Component): DragMode {
+    const mode = component?.getDragMode() || this.get('dmode');
+    return mode || '';
   }
 
   t(...args: any[]) {
@@ -1006,8 +968,8 @@ export default class EditorModel extends Model {
    * Returns true if the editor is in absolute mode
    * @returns {Boolean}
    */
-  inAbsoluteMode() {
-    return this.get('dmode') === 'absolute';
+  inAbsoluteMode(component?: Component) {
+    return this.getDragMode(component) === 'absolute';
   }
 
   /**
@@ -1019,6 +981,7 @@ export default class EditorModel extends Model {
     // @ts-ignore
     const { editors = [] } = config.grapesjs || {};
     const shallow = this.get('shallow');
+    this._storageTimeout && clearTimeout(this._storageTimeout);
     shallow?.destroyAll();
     this.stopListening();
     this.stopDefault();

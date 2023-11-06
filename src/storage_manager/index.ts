@@ -1,5 +1,5 @@
 /**
- * You can customize the initial state of the module from the editor initialization, by passing the following [Configuration Object](https://github.com/artf/grapesjs/blob/master/src/storage_manager/config/config.ts)
+ * You can customize the initial state of the module from the editor initialization, by passing the following [Configuration Object](https://github.com/GrapesJS/grapesjs/blob/master/src/storage_manager/config/config.ts)
  * ```js
  * const editor = grapesjs.init({
  *  storageManager: {
@@ -21,10 +21,10 @@
  *
  * ## Available Events
  * * `storage:start` - Before the storage request is started
- * * `storage:start:store` - Before the store request. The object to store is passed as an argumnet (which you can edit)
- * * `storage:start:load` - Before the load request. Items to load are passed as an argumnet (which you can edit)
- * * `storage:load` - Triggered when something was loaded from the storage, loaded object passed as an argumnet
- * * `storage:store` - Triggered when something is stored to the storage, stored object passed as an argumnet
+ * * `storage:start:store` - Before the store request. The object to store is passed as an argument (which you can edit)
+ * * `storage:start:load` - Before the load request. Items to load are passed as an argument (which you can edit)
+ * * `storage:load` - Triggered when something was loaded from the storage, loaded object passed as an argument
+ * * `storage:store` - Triggered when something is stored to the storage, stored object passed as an argument
  * * `storage:end` - After the storage request is ended
  * * `storage:end:store` - After the store request
  * * `storage:end:load` - After the load request

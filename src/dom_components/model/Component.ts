@@ -86,7 +86,7 @@ export const keyUpdateInside = `${keyUpdate}-inside`;
  * @property {Array<String>} [unstylable=[]] Indicate an array of style properties which should be hidden from the style manager. Default: `[]`
  * @property {Boolean} [highlightable=true] It can be highlighted with 'dotted' borders if true. Default: `true`
  * @property {Boolean} [copyable=true] True if it's possible to clone the component. Default: `true`
- * @property {Boolean} [resizable=false] Indicates if it's possible to resize the component. It's also possible to pass an object as [options for the Resizer](https://github.com/artf/grapesjs/blob/master/src/utils/Resizer.js). Default: `false`
+ * @property {Boolean} [resizable=false] Indicates if it's possible to resize the component. It's also possible to pass an object as [options for the Resizer](https://github.com/GrapesJS/grapesjs/blob/master/src/utils/Resizer.js). Default: `false`
  * @property {Boolean} [editable=false] Allow to edit the content of the component (used on Text components). Default: `false`
  * @property {Boolean} [layerable=true] Set to `false` if you need to hide the component inside Layers. Default: `true`
  * @property {Boolean} [selectable=true] Allow component to be selected when clicked. Default: `true`
@@ -112,7 +112,9 @@ export const keyUpdateInside = `${keyUpdate}-inside`;
  * @module docsjs.Component
  */
 export default class Component extends StyleableModel<ComponentProperties> {
-  /** @ts-ignore */
+  /**
+   * @private
+   * @ts-ignore */
   get defaults(): ComponentDefinitionDefined {
     return {
       tagName: 'div',
@@ -195,7 +197,9 @@ export default class Component extends StyleableModel<ComponentProperties> {
   prevColl?: Components;
   __hasUm?: boolean;
   __symbReady?: boolean;
-  /** @ts-ignore */
+  /**
+   * @private
+   * @ts-ignore */
   collection!: Components;
 
   initialize(props = {}, opt: ComponentOptions = {}) {
@@ -350,12 +354,20 @@ export default class Component extends StyleableModel<ComponentProperties> {
 
   /**
    * Change the drag mode of the component.
-   * To get more about this feature read: https://github.com/artf/grapesjs/issues/1936
-   * @param {String} value Drag mode, options: 'absolute' | 'translate'
+   * To get more about this feature read: https://github.com/GrapesJS/grapesjs/issues/1936
+   * @param {String} value Drag mode, options: `'absolute'` | `'translate'` | `''`
    * @returns {this}
    */
   setDragMode(value?: DragMode) {
     return this.set('dmode', value);
+  }
+
+  /**
+   * Get the drag mode of the component.
+   * @returns {String} Drag mode value, options: `'absolute'` | `'translate'` | `''`
+   */
+  getDragMode(): DragMode {
+    return this.get('dmode') || '';
   }
 
   /**
@@ -1446,10 +1458,12 @@ export default class Component extends StyleableModel<ComponentProperties> {
   }
 
   /**
-   * Get the name of the component
-   * @return {String}
+   * Get the name of the component.
+   * @param {Object} [opts={}] Options
+   * @param {Boolean} [opts.noCustom] Avoid custom name assigned to the component.
+   * @returns {String}
    * */
-  getName() {
+  getName(opts: { noCustom?: boolean } = {}) {
     const { em } = this;
     const { type, tagName, name } = this.attributes;
     const defName = type || tagName;
@@ -1458,8 +1472,10 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const i18nName = name && em?.t(`${i18nPfx}${name}`);
     const i18nNameTag = nameTag && em?.t(`${i18nPfx}${nameTag}`);
     const i18nDefName = em && (em.t(`${i18nPfx}${type}`) || em.t(`${i18nPfx}${tagName}`));
+    const customName = this.get('custom-name');
+
     return (
-      this.get('custom-name') || // Used in Layers (when the user changes the name)
+      (!opts.noCustom ? customName : '') || // Used in Layers (when the user changes the name)
       i18nName || // Use local component `name` key (eg. `domComponents.names.myComponentName`)
       name || // Use component `name` key
       i18nNameTag || // Use local component `tagName` key (eg. `domComponents.names.div`)

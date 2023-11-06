@@ -31,7 +31,6 @@ describe('Component', () => {
       domc: dcomp,
     };
     obj = new Component({}, compOpts);
-    dcomp.init({ em });
   });
 
   afterEach(() => {
@@ -654,7 +653,6 @@ describe('Components', () => {
     const em = new Editor({});
     dcomp = em.get('DomComponents');
     em.get('PageManager').onLoad();
-    dcomp.init({ em });
     const id = 'myid';
     const idB = 'myid2';
     const block = `

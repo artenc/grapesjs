@@ -71,6 +71,8 @@ styleManager.addSector(...);
 
 [Property]: property.html
 
+## Sectors
+
 ## getConfig
 
 Get configuration object
@@ -386,7 +388,7 @@ Get all types
 
 Returns **[Array][27]** 
 
-[1]: https://github.com/artf/grapesjs/blob/master/src/style_manager/config/config.ts
+[1]: https://github.com/GrapesJS/grapesjs/blob/master/src/style_manager/config/config.ts
 
 [2]: #getconfig
 
