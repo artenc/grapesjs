@@ -1,7 +1,7 @@
 {
   "name": "grapesjs",
   "description": "Free and Open Source Web Builder Framework",
-  "version": "0.21.6",
+  "version": "0.21.7",
   "author": "Artur Arseniev",
   "license": "BSD-3-Clause",
   "homepage": "http://grapesjs.com",
@@ -11,13 +11,15 @@
   "exports": {
     ".": {
       "import": "./dist/grapes.mjs",
-      "require": "./dist/grapes.min.js"
+      "require": "./dist/grapes.min.js",
+      "types": "./dist/index.d.ts"
     },
     "./*": "./*"
   },
   "files": [
     "dist",
-    "locale"
+    "locale",
+    "src/styles"
   ],
   "sideEffects": [
     "*.vue",

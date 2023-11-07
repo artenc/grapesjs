@@ -61298,7 +61298,7 @@ var grapesjs = {
     plugins: plugins,
     usePlugin: usePlugin,
     // @ts-ignore Will be replaced on build
-    version: '0.21.6',
+    version: '0.21.7',
     /**
      * Initialize the editor with passed options
      * @param {Object} config Configuration object
