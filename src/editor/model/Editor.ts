@@ -2,7 +2,7 @@ import { isUndefined, isArray, contains, toArray, keys, bindAll } from 'undersco
 import Backbone from 'backbone';
 import $ from '../../utils/cash-dom';
 import Extender from '../../utils/extender';
-import { getModel, hasWin, isEmptyObj } from '../../utils/mixins';
+import { getModel, hasWin, isEmptyObj, wait } from '../../utils/mixins';
 import { AddOptions, Model } from '../../common';
 import Selected from './Selected';
 import FrameView from '../../canvas/view/FrameView';
@@ -37,9 +37,8 @@ import CssRule from '../../css_composer/model/CssRule';
 import { HTMLGeneratorBuildOptions } from '../../code_manager/model/HtmlGenerator';
 import { CssGeneratorBuildOptions } from '../../code_manager/model/CssGenerator';
 import ComponentView from '../../dom_components/view/ComponentView';
-import { ProjectData } from '../../storage_manager/model/IStorage';
+import { ProjectData, StorageOptions } from '../../storage_manager/model/IStorage';
 import CssRules from '../../css_composer/model/CssRules';
-import Frame from '../../canvas/model/Frame';
 import { ComponentAdd, DragMode } from '../../dom_components/model/types';
 import ComponentWrapper from '../../dom_components/model/ComponentWrapper';
 import { CanvasSpotBuiltInTypes } from '../../canvas/model/CanvasSpot';
@@ -82,6 +81,11 @@ const logs = {
   warning: console.warn,
   error: console.error,
 };
+
+export interface EditorLoadOptions {
+  /** Clear the editor state (eg. dirty counter, undo manager, etc.). */
+  clear?: boolean;
+}
 
 export default class EditorModel extends Model {
   defaults() {
@@ -828,15 +832,10 @@ export default class EditorModel extends Model {
    * Store data to the current storage.
    * @public
    */
-  async store(options?: any) {
-    options = {
-      preventResetChanges: false,
-      ...options,
-    };
-
+  async store<T extends StorageOptions>(options?: T) {
     const data = this.storeData();
     await this.Storage.store(data, options);
-    if (!options.preventResetChanges) {
+    if (!options?.preventResetChanges) {
       this.clearDirtyCount();
     }
     return data;
@@ -846,9 +845,17 @@ export default class EditorModel extends Model {
    * Load data from the current storage.
    * @public
    */
-  async load(options?: any) {
+  async load<T extends StorageOptions>(options?: T, loadOptions: EditorLoadOptions = {}) {
     const result = await this.Storage.load(options);
     this.loadData(result);
+    // Wait in order to properly update the dirty counter (#5385)
+    await wait();
+
+    if (loadOptions.clear) {
+      this.UndoManager.clear();
+      this.clearDirtyCount();
+    }
+
     return result;
   }
 

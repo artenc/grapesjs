@@ -1,12 +1,24 @@
 {
   "name": "grapesjs",
   "description": "Free and Open Source Web Builder Framework",
-  "version": "0.21.5",
+  "version": "0.21.6",
   "author": "Artur Arseniev",
   "license": "BSD-3-Clause",
   "homepage": "http://grapesjs.com",
   "main": "dist/grapes.min.js",
   "types": "dist/index.d.ts",
+  "module": "dist/grapes.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/grapes.mjs",
+      "require": "./dist/grapes.min.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "dist",
+    "locale"
+  ],
   "sideEffects": [
     "*.vue",
     "*.css",
@@ -41,7 +53,6 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^2.4.1",
     "sass": "^1.42.1",
-    "sinon": "^7.5.0",
     "vuepress": "^1.8.2",
     "whatwg-fetch": "^3.6.2"
   },
@@ -105,11 +116,13 @@
     "docs:build-vp": "vuepress build docs",
     "docs:build": "npm run docs:api && npm run docs:build-vp",
     "docs:deploy": "docs/deploy.sh",
-    "lint": "eslint . --ext .ts,.js",
+    "lint": "eslint . --ext .ts,.js && npm run lint:ts",
     "check": "npm run lint && npm run test",
-    "check:ts": "tsc --noEmit",
-    "build": "npm run check && run-s build:* && npm run ts:check",
+    "lint:ts": "tsc --noEmit",
+    "build": "npm run check && npm run build-all && npm run ts:check",
+    "build-all": "run-s build:*",
     "build:js": "grapesjs-cli build --targets=\"> 1%, ie 11, safari 8, not dead\" --statsOutput=\"stats.json\" --localePath=\"src/i18n/locale\"",
+    "build:mjs": "BUILD_MODULE=true grapesjs-cli build --dts='skip' --patch=0 --targets=\"> 1%, ie 11, safari 8, not dead\"",
     "build:css": "sass src/styles/scss/main.scss dist/css/grapes.min.css --no-source-map --style=compressed --load-path=node_modules",
     "ts:build": "grapesjs-cli build --dts='only' --patch=0",
     "ts:check": "tsc --noEmit --esModuleInterop dist/index.d.ts",
