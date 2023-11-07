@@ -42,6 +42,7 @@ import CssRules from '../../css_composer/model/CssRules';
 import Frame from '../../canvas/model/Frame';
 import { ComponentAdd, DragMode } from '../../dom_components/model/types';
 import ComponentWrapper from '../../dom_components/model/ComponentWrapper';
+import { CanvasSpotBuiltInTypes } from '../../canvas/model/CanvasSpot';
 
 Backbone.$ = $;
 
@@ -565,7 +566,7 @@ export default class EditorModel extends Model {
    */
   addSelected(el: Component | Component[], opts: any = {}) {
     const model = getModel(el, $);
-    const models = isArray(model) ? model : [model];
+    const models: Component[] = isArray(model) ? model : [model];
 
     models.forEach(model => {
       const { selected } = this;
@@ -583,7 +584,11 @@ export default class EditorModel extends Model {
       toDeselect.forEach(cmp => this.removeSelected(cmp, opts));
 
       selected.addComponent(model, opts);
-      model && this.trigger('component:select', model, opts);
+      this.trigger('component:select', model, opts);
+      this.Canvas.addSpot({
+        type: CanvasSpotBuiltInTypes.Select,
+        component: model,
+      });
     });
   }
 
@@ -594,7 +599,15 @@ export default class EditorModel extends Model {
    * @public
    */
   removeSelected(el: Component | Component[], opts = {}) {
-    this.selected.removeComponent(getModel(el, $), opts);
+    const component = getModel(el, $);
+    this.selected.removeComponent(component, opts);
+    const cmps: Component[] = isArray(component) ? component : [component];
+    cmps.forEach(component =>
+      this.Canvas.removeSpots({
+        type: CanvasSpotBuiltInTypes.Select,
+        component,
+      })
+    );
   }
 
   /**
@@ -618,25 +631,48 @@ export default class EditorModel extends Model {
 
   /**
    * Hover a component
-   * @param  {Component|HTMLElement} el Component to select
+   * @param  {Component|HTMLElement} cmp Component to select
    * @param  {Object} [opts={}] Options, optional
    * @private
    */
-  setHovered(el: any, opts: any = {}) {
-    if (!el) return this.set('componentHovered', '');
+  setHovered(cmp?: Component | null, opts: any = {}) {
+    const upHovered = (cmp?: Component, opts?: any) => {
+      const { config, Canvas } = this;
+      const current = this.getHovered();
+      const selectedAll = this.getSelectedAll();
+      const typeHover = CanvasSpotBuiltInTypes.Hover;
+      const typeSpacing = CanvasSpotBuiltInTypes.Spacing;
+      this.set('componentHovered', cmp || null, opts);
+
+      if (current) {
+        Canvas.removeSpots({ type: typeHover, component: current });
+        Canvas.removeSpots({ type: typeSpacing, component: current });
+      }
+
+      if (cmp) {
+        Canvas.addSpot({ type: typeHover, component: cmp });
+        if (!selectedAll.includes(cmp) || config.showOffsetsSelected) {
+          Canvas.addSpot({ type: typeSpacing, component: cmp });
+        }
+      }
+    };
+
+    if (!cmp) {
+      return upHovered();
+    }
 
     const ev = 'component:hover';
-    let model = getModel(el, undefined);
+    let model = getModel(cmp, undefined) as Component | undefined;
 
     if (!model) return;
 
-    opts.forceChange && this.set('componentHovered', '');
+    opts.forceChange && upHovered();
     this.trigger(`${ev}:before`, model, opts);
 
     // Check for valid hoverable
     if (!model.get('hoverable')) {
       if (opts.useValid && !opts.abort) {
-        let parent = model && model.parent();
+        let parent = model.parent();
         while (parent && !parent.get('hoverable')) parent = parent.parent();
         model = parent;
       } else {
@@ -645,13 +681,13 @@ export default class EditorModel extends Model {
     }
 
     if (!opts.abort) {
-      this.set('componentHovered', model, opts);
+      upHovered(model, opts);
       this.trigger(ev, model, opts);
     }
   }
 
   getHovered() {
-    return this.get('componentHovered');
+    return this.get('componentHovered') as Component | undefined;
   }
 
   /**

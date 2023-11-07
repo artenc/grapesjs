@@ -53,53 +53,54 @@
  *
  * @module Components
  */
-import { isEmpty, isObject, isArray, isFunction, isString, result, debounce } from 'underscore';
+import { debounce, isArray, isEmpty, isFunction, isString, result } from 'underscore';
+import { ItemManagerModule } from '../abstract/Module';
+import { AddOptions, ObjectAny } from '../common';
+import EditorModel from '../editor/model/Editor';
+import { isComponent } from '../utils/mixins';
 import defaults, { DomComponentsConfig } from './config/config';
 import Component, { IComponent, keyUpdate, keyUpdateInside } from './model/Component';
+import ComponentComment from './model/ComponentComment';
+import ComponentFrame from './model/ComponentFrame';
+import ComponentImage from './model/ComponentImage';
+import ComponentLabel from './model/ComponentLabel';
+import ComponentLink from './model/ComponentLink';
+import ComponentMap from './model/ComponentMap';
+import ComponentScript from './model/ComponentScript';
+import ComponentSvg from './model/ComponentSvg';
+import ComponentSvgIn from './model/ComponentSvgIn';
+import ComponentTable from './model/ComponentTable';
+import ComponentTableBody from './model/ComponentTableBody';
+import ComponentTableCell from './model/ComponentTableCell';
+import ComponentTableFoot from './model/ComponentTableFoot';
+import ComponentTableHead from './model/ComponentTableHead';
+import ComponentTableRow from './model/ComponentTableRow';
+import ComponentText from './model/ComponentText';
+import ComponentTextNode from './model/ComponentTextNode';
+import ComponentVideo from './model/ComponentVideo';
+import ComponentWrapper from './model/ComponentWrapper';
 import Components from './model/Components';
+import { ComponentAdd, ComponentDefinition, ComponentDefinitionDefined } from './model/types';
+import ComponentCommentView from './view/ComponentCommentView';
+import ComponentFrameView from './view/ComponentFrameView';
+import ComponentImageView from './view/ComponentImageView';
+import ComponentLabelView from './view/ComponentLabelView';
+import ComponentLinkView from './view/ComponentLinkView';
+import ComponentMapView from './view/ComponentMapView';
+import ComponentScriptView from './view/ComponentScriptView';
+import ComponentSvgView from './view/ComponentSvgView';
+import ComponentTableBodyView from './view/ComponentTableBodyView';
+import ComponentTableCellView from './view/ComponentTableCellView';
+import ComponentTableFootView from './view/ComponentTableFootView';
+import ComponentTableHeadView from './view/ComponentTableHeadView';
+import ComponentTableRowView from './view/ComponentTableRowView';
+import ComponentTableView from './view/ComponentTableView';
+import ComponentTextNodeView from './view/ComponentTextNodeView';
+import ComponentTextView from './view/ComponentTextView';
+import ComponentVideoView from './view/ComponentVideoView';
 import ComponentView, { IComponentView } from './view/ComponentView';
 import ComponentWrapperView from './view/ComponentWrapperView';
 import ComponentsView from './view/ComponentsView';
-import ComponentTableCell from './model/ComponentTableCell';
-import ComponentTableCellView from './view/ComponentTableCellView';
-import ComponentTableRow from './model/ComponentTableRow';
-import ComponentTableRowView from './view/ComponentTableRowView';
-import ComponentTable from './model/ComponentTable';
-import ComponentTableView from './view/ComponentTableView';
-import ComponentTableHead from './model/ComponentTableHead';
-import ComponentTableHeadView from './view/ComponentTableHeadView';
-import ComponentTableBody from './model/ComponentTableBody';
-import ComponentTableBodyView from './view/ComponentTableBodyView';
-import ComponentTableFoot from './model/ComponentTableFoot';
-import ComponentTableFootView from './view/ComponentTableFootView';
-import ComponentMap from './model/ComponentMap';
-import ComponentMapView from './view/ComponentMapView';
-import ComponentLink from './model/ComponentLink';
-import ComponentLinkView from './view/ComponentLinkView';
-import ComponentLabel from './model/ComponentLabel';
-import ComponentLabelView from './view/ComponentLabelView';
-import ComponentVideo from './model/ComponentVideo';
-import ComponentVideoView from './view/ComponentVideoView';
-import ComponentImage from './model/ComponentImage';
-import ComponentImageView from './view/ComponentImageView';
-import ComponentScript from './model/ComponentScript';
-import ComponentScriptView from './view/ComponentScriptView';
-import ComponentSvg from './model/ComponentSvg';
-import ComponentSvgIn from './model/ComponentSvgIn';
-import ComponentSvgView from './view/ComponentSvgView';
-import ComponentComment from './model/ComponentComment';
-import ComponentCommentView from './view/ComponentCommentView';
-import ComponentTextNode from './model/ComponentTextNode';
-import ComponentTextNodeView from './view/ComponentTextNodeView';
-import ComponentText from './model/ComponentText';
-import ComponentTextView from './view/ComponentTextView';
-import ComponentWrapper from './model/ComponentWrapper';
-import ComponentFrame from './model/ComponentFrame';
-import ComponentFrameView from './view/ComponentFrameView';
-import { ItemManagerModule } from '../abstract/Module';
-import EditorModel from '../editor/model/Editor';
-import { ComponentAdd, ComponentDefinition, ComponentDefinitionDefined } from './model/types';
-import { AddOptions } from '../common';
 
 export type ComponentEvent =
   | 'component:create'
@@ -137,6 +138,29 @@ export interface AddComponentTypeOptions {
   extendView?: string;
   extendFn?: string[];
   extendFnView?: string[];
+}
+
+/** @private */
+export enum CanMoveReason {
+  /**
+   * Invalid source. This is a default value and should be ignored in case the `result` is true
+   */
+  InvalidSource = 0,
+  /**
+   * Source doesn't accept target as destination.
+   */
+  SourceReject = 1,
+  /**
+   * Target doesn't accept source.
+   */
+  TargetReject = 2,
+}
+
+export interface CanMoveResult {
+  result: boolean;
+  reason: CanMoveReason;
+  target: Component;
+  source?: Component | null;
 }
 
 export default class ComponentManager extends ItemManagerModule<DomComponentsConfig, any> {
@@ -249,6 +273,8 @@ export default class ComponentManager extends ItemManagerModule<DomComponentsCon
   Component = Component;
 
   Components = Components;
+
+  ComponentView = ComponentView;
 
   ComponentsView = ComponentsView;
 
@@ -638,36 +664,56 @@ export default class ComponentManager extends ItemManagerModule<DomComponentsCon
   }
 
   /**
-   * Check if the component can be moved inside another.
-   * @param {[Component]} target The target Component is the one that is supposed to receive the source one.
-   * @param {[Component]|String} source The source can be another Component or an HTML string.
-   * @param {Number} [index] Index position. If not specified, the check will perform against appending the source to target.
+   * Check if the object is a [Component].
+   * @param {Object} obj
+   * @returns {Boolean}
+   * @example
+   * cmp.isComponent(editor.getSelected()); // true
+   * cmp.isComponent({}); // false
+   */
+  isComponent(obj?: ObjectAny): obj is Component {
+    return isComponent(obj);
+  }
+
+  /**
+   * Check if a component can be moved inside another one.
+   * @param {[Component]} target The target component is the one that is supposed to receive the source one.
+   * @param {[Component]|String} source The source can be another component, a component definition or an HTML string.
+   * @param {Number} [index] Index position, if not specified, the check will be performed against appending the source to the target.
    * @returns {Object} Object containing the `result` (Boolean), `source`, `target` (as Components), and a `reason` (Number) with these meanings:
    * * `0` - Invalid source. This is a default value and should be ignored in case the `result` is true.
    * * `1` - Source doesn't accept target as destination.
    * * `2` - Target doesn't accept source.
-   * @private
+   * @example
+   * const rootComponent = editor.getWrapper();
+   * const someComponent = editor.getSelected();
+   *
+   * // Check with two components
+   * editor.Components.canMove(rootComponent, someComponent);
+   *
+   * // Check with component definition
+   * editor.Components.canMove(rootComponent, { tagName: 'a', draggable: false });
+   *
+   * // Check with HTML string
+   * editor.Components.canMove(rootComponent, '<form>...</form>');
    */
-  canMove(target: Component, source?: Component, index?: number) {
-    const at = index || index === 0 ? index : null;
-    const result = {
+  canMove(target: Component, source?: Component | ComponentDefinition | string, index?: number): CanMoveResult {
+    const result: CanMoveResult = {
       result: false,
-      reason: 0,
+      reason: CanMoveReason.InvalidSource,
       target,
       source: null,
     };
 
     if (!source || !target) return result;
 
-    //@ts-ignore
-    let srcModel = source.toHTML ? source : null;
+    let srcModel = isComponent(source) ? source : null;
 
     if (!srcModel) {
       const wrapper = this.getShallowWrapper();
       srcModel = wrapper?.append(source)[0] || null;
     }
 
-    //@ts-ignore
     result.source = srcModel;
 
     if (!srcModel) return result;
@@ -676,20 +722,20 @@ export default class ComponentManager extends ItemManagerModule<DomComponentsCon
     let draggable = srcModel.get('draggable');
 
     if (isFunction(draggable)) {
-      draggable = !!draggable(srcModel, target, at);
+      draggable = !!draggable(srcModel, target, index);
     } else {
       const el = target.getEl();
       draggable = isArray(draggable) ? draggable.join(',') : draggable;
       draggable = isString(draggable) ? el?.matches(draggable) : draggable;
     }
 
-    if (!draggable) return { ...result, reason: 1 };
+    if (!draggable) return { ...result, reason: CanMoveReason.SourceReject };
 
     // Check if the target accepts the source
     let droppable = target.get('droppable');
 
     if (isFunction(droppable)) {
-      droppable = !!droppable(srcModel, target, at);
+      droppable = !!droppable(srcModel, target, index);
     } else {
       if (droppable === false && target.isInstanceOf('text') && srcModel.get('textable')) {
         droppable = true;
@@ -703,7 +749,7 @@ export default class ComponentManager extends ItemManagerModule<DomComponentsCon
     // Ensure the target is not inside the source
     const isTargetInside = [target].concat(target.parents()).indexOf(srcModel) > -1;
 
-    if (!droppable || isTargetInside) return { ...result, reason: 2 };
+    if (!droppable || isTargetInside) return { ...result, reason: CanMoveReason.TargetReject };
 
     return { ...result, result: true };
   }

@@ -1,7 +1,8 @@
-import { bindAll, isFunction, each } from 'underscore';
-import { Position } from '../common';
-import { on, off, normalizeFloat } from './mixins';
+import { bindAll, each, isFunction } from 'underscore';
 import { ElementPosOpts } from '../canvas/view/CanvasView';
+import { Position } from '../common';
+import { off, on } from './dom';
+import { normalizeFloat } from './mixins';
 
 type RectDim = {
   t: number;

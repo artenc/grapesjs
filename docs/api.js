@@ -4,8 +4,35 @@ const documentation = require('documentation');
 const fs = require('fs');
 const docRoot = __dirname;
 const srcRoot = path.join(docRoot, '../src/');
+const START_EVENTS = '{START_EVENTS}';
+const END_EVENTS = '{END_EVENTS}';
+const REPLACE_EVENTS = '{REPLACE_EVENTS}';
 
 const log = (...args) => console.log(...args);
+
+const getEventsMdFromTypes = async (filePath) => {
+  const dirname = filePath.replace(path.basename(filePath), '');
+  const typesFilePath = `${dirname}types.ts`;
+
+  if (fs.existsSync(typesFilePath) && typesFilePath.includes('canvas')) {
+    const resTypes = await documentation.build([typesFilePath], { shallow: true })
+      .then(cm => documentation.formats.md(cm, /*{ markdownToc: true }*/));
+    const indexFrom = resTypes.indexOf(START_EVENTS) + START_EVENTS.length;
+    const indexTo = resTypes.indexOf(END_EVENTS);
+    // console.log(`${resTypes}`)
+    const result = resTypes.substring(indexFrom, indexTo)
+      .replace(/\n### Examples\n/gi, '')
+      .replace(/\n## types\n/gi, '')
+      .replace(/## /gi, '* ')
+      .replace(/\\`/gi, '`')
+      .replace(/##/gi, '')
+      .trim();
+
+    return result
+  }
+
+  return '';
+}
 
 async function generateDocs () {
   log('Start API Reference generation...');
@@ -42,6 +69,7 @@ async function generateDocs () {
     ['undo_manager/index.ts', 'undo_manager.md'],
     ['canvas/index.ts', 'canvas.md'],
     ['canvas/model/Frame.ts', 'frame.md'],
+    ['canvas/model/CanvasSpot.ts', 'canvas_spot.md'],
     ['i18n/index.ts', 'i18n.md'],
     ['navigator/index.ts', 'layer_manager.md'],
     ['pages/index.ts', 'pages.md'],
@@ -56,8 +84,9 @@ async function generateDocs () {
 
     return documentation.build([filePath], { shallow: true })
       .then(cm => documentation.formats.md(cm, /*{ markdownToc: true }*/))
-      .then(output => {
-        const res = output
+      .then(async (output) => {
+        let addLogs = [];
+        let result = output
           .replace(/\*\*\\\[/g, '**[')
           .replace(/\*\*\(\\\[/g, '**([')
           .replace(/<\\\[/g, '<[')
@@ -67,8 +96,18 @@ async function generateDocs () {
           .replace(/docsjs\./g, '')
           .replace('**Extends ModuleModel**', '')
           .replace('**Extends Model**', '');
-        fs.writeFileSync(`${docRoot}/api/${file[1]}`, res);
-        log('Created', file[1]);
+
+        // Search for module event documentation
+        if (result.indexOf(REPLACE_EVENTS) >= 0) {
+          const eventsMd = await getEventsMdFromTypes(filePath);
+          if (eventsMd && result.indexOf(REPLACE_EVENTS) >= 0) {
+            addLogs.push('replaced events');
+          }
+          result = eventsMd ? result.replace(REPLACE_EVENTS, `## Available Events\n${eventsMd}`) : result;
+        }
+
+        fs.writeFileSync(`${docRoot}/api/${file[1]}`, result);
+        log('Created', file[1], addLogs.length ? `(${addLogs.join(', ')})` : '');
       });
   }));
 

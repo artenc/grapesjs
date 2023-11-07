@@ -1,11 +1,12 @@
 import { bindAll, debounce, isElement } from 'underscore';
-import { $ } from '../../common';
 import Component from '../../dom_components/model/Component';
 import Toolbar from '../../dom_components/model/Toolbar';
 import ToolbarView from '../../dom_components/view/ToolbarView';
-import { isDoc, isVisible } from '../../utils/dom';
-import { getUnitFromValue, getViewEl, hasWin, isTaggableNode, off, on } from '../../utils/mixins';
+import { isDoc, isTaggableNode, isVisible, off, on } from '../../utils/dom';
+import { getComponentModel, getComponentView, getUnitFromValue, getViewEl, hasWin, isObject } from '../../utils/mixins';
 import { CommandObject } from './CommandAbstract';
+import { CanvasSpotBuiltInTypes } from '../../canvas/model/CanvasSpot';
+import { ResizerOptions } from '../../utils/Resizer';
 
 let showOffsets: boolean;
 /**
@@ -29,8 +30,18 @@ let showOffsets: boolean;
  *
  */
 export default {
-  init(o: any) {
-    bindAll(this, 'onHover', 'onOut', 'onClick', 'onFrameScroll', 'onFrameUpdated', 'onContainerChange');
+  init() {
+    this.onSelect = debounce(this.onSelect, 0);
+    bindAll(
+      this,
+      'onHover',
+      'onOut',
+      'onClick',
+      'onFrameScroll',
+      'onFrameResize',
+      'onFrameUpdated',
+      'onContainerChange'
+    );
   },
 
   enable() {
@@ -71,8 +82,8 @@ export default {
       methods[method](body, 'mouseover', this.onHover);
       methods[method](body, 'mouseleave', this.onOut);
       methods[method](body, 'click', this.onClick);
-      // @ts-ignore
       methods[method](win, 'scroll', this.onFrameScroll, true);
+      methods[method](win, 'resize', this.onFrameResize);
     };
     methods[method](window, 'resize', this.onFrameUpdated);
     methods[method](listenToEl, 'scroll', this.onContainerChange);
@@ -99,27 +110,26 @@ export default {
    * @param {Object}  e
    * @private
    */
-  onHover(e: any) {
-    e.stopPropagation();
+  onHover(ev: Event) {
+    ev.stopPropagation();
     const { em } = this;
-    const trg = e.target;
-    const view = getViewEl(trg);
-    const frameView = view && view._getFrame();
-    const $el = $(trg);
-    let model = $el.data('model');
+    const el = ev.target as HTMLElement;
+    const view = getComponentView(el);
+    const frameView = view?.frameView;
+    let model = view?.model;
 
     // Get first valid model
     if (!model) {
-      let parent = $el.parent();
-      while (!model && parent.length && !isDoc(parent[0])) {
-        model = parent.data('model');
-        parent = parent.parent();
+      let parentEl = el.parentNode;
+      while (!model && parentEl && !isDoc(parentEl)) {
+        model = getComponentModel(parentEl);
+        parentEl = parentEl.parentNode;
       }
     }
 
-    this.currentDoc = trg.ownerDocument;
+    this.currentDoc = el.ownerDocument;
     em.setHovered(model, { useValid: true });
-    frameView && em.set('currentFrame', frameView);
+    frameView && em.setCurrentFrame(frameView);
   },
 
   onFrameUpdated() {
@@ -135,9 +145,12 @@ export default {
         const el = view.el;
         const pos = this.getElementPos(el);
         result = { el, pos, component, view: getViewEl(el) };
-        this.updateToolsLocal(result);
 
-        if (el.ownerDocument === this.currentDoc) this.elHovered = result;
+        if (el.ownerDocument === this.currentDoc) {
+          this.elHovered = result;
+        }
+
+        this.updateToolsLocal(result);
       });
     } else {
       this.currentDoc = null;
@@ -157,30 +170,25 @@ export default {
    * @param {Object}  el
    * @private
    * */
-  onSelect: debounce(function () {
-    // @ts-ignore
+  onSelect() {
     const { em } = this;
     const component = em.getSelected();
-    const currentFrame = em.get('currentFrame') || {};
-    const view = component && component.getView(currentFrame.model);
+    const currentFrame = em.getCurrentFrame();
+    const view = component && component.getView(currentFrame?.model);
     let el = view && view.el;
     let result = {};
 
     if (el && isVisible(el)) {
-      // @ts-ignore
       const pos = this.getElementPos(el);
       result = { el, pos, component, view: getViewEl(el) };
     }
 
-    // @ts-ignore
     this.elSelected = result;
-    // @ts-ignore
     this.updateToolsGlobal();
-    // @ts-ignore This will hide some elements from the select component
+    // This will hide some elements from the select component
     this.updateLocalPos(result);
-    // @ts-ignore
     this.initResize(component);
-  }, 0),
+  },
 
   updateGlobalPos() {
     const sel = this.getElSelected();
@@ -205,7 +213,7 @@ export default {
   },
 
   onOut() {
-    this.em.setHovered(0);
+    this.em.setHovered();
   },
 
   toggleToolsEl(on: boolean, view: any, opts: any = {}) {
@@ -276,19 +284,22 @@ export default {
    * @param {Event}  e
    * @private
    */
-  onClick(ev: any) {
+  onClick(ev: Event) {
     ev.stopPropagation();
     ev.preventDefault();
     const { em } = this;
+
     if (em.get('_cmpDrag')) return em.set('_cmpDrag');
-    const $el = $(ev.target);
-    let model = $el.data('model');
+
+    const el = ev.target as HTMLElement;
+    let model = getComponentModel(el);
 
     if (!model) {
-      let parent = $el.parent();
-      while (!model && parent.length && !isDoc(parent[0])) {
-        model = parent.data('model');
-        parent = parent.parent();
+      let parentEl = el.parentNode;
+
+      while (!model && parentEl && !isDoc(parentEl)) {
+        model = getComponentModel(parentEl);
+        parentEl = parentEl.parentNode;
       }
     }
 
@@ -320,9 +331,14 @@ export default {
    * */
   updateBadge(el: HTMLElement, pos: any, opts: any = {}) {
     const { canvas } = this;
-    const model = $(el).data('model');
-    if (!model || !model.get('badgable')) return;
+    const model = getComponentModel(el);
     const badge = this.getBadge(opts);
+    const bStyle = badge.style;
+
+    if (!model || !model.get('badgable')) {
+      bStyle.display = 'none';
+      return;
+    }
 
     if (!opts.posOnly) {
       const config = this.canvas.getConfig();
@@ -336,7 +352,6 @@ export default {
     }
 
     const un = 'px';
-    const bStyle = badge.style;
     bStyle.display = 'block';
 
     const targetToElem = canvas.getTargetToElementFixed(el, badge, {
@@ -367,28 +382,35 @@ export default {
    */
   initResize(elem: HTMLElement) {
     const { em, canvas } = this;
-    const editor = em?.Editor;
-    const config = em?.config;
-    const pfx = config.stylePrefix || '';
-    const resizeClass = `${pfx}resizing`;
+    const editor = em.Editor;
     const model = !isElement(elem) && isTaggableNode(elem) ? elem : em.getSelected();
-    const resizable = model && model.get('resizable');
-    let options = {};
-    let modelToStyle: any;
+    const resizable = model?.get('resizable');
+    const spotTypeResize = CanvasSpotBuiltInTypes.Resize;
+    const hasCustomResize = canvas.hasCustomSpot(spotTypeResize);
+    canvas.removeSpots({ type: spotTypeResize });
 
-    var toggleBodyClass = (method: string, e: any, opts: any) => {
-      const docs = opts.docs;
-      docs &&
-        docs.forEach((doc: Document) => {
-          const body = doc.body;
-          const cls = body.className || '';
-          body.className = (method == 'add' ? `${cls} ${resizeClass}` : cls.replace(resizeClass, '')).trim();
-        });
-    };
+    if (model && resizable) {
+      canvas.addSpot({ type: spotTypeResize, component: model });
 
-    if (editor && resizable) {
+      if (hasCustomResize) return;
+
+      let modelToStyle: any;
+      const { config } = em;
+      const pfx = config.stylePrefix || '';
+      const resizeClass = `${pfx}resizing`;
+
+      const toggleBodyClass = (method: string, e: any, opts: any) => {
+        const docs = opts.docs;
+        docs &&
+          docs.forEach((doc: Document) => {
+            const body = doc.body;
+            const cls = body.className || '';
+            body.className = (method == 'add' ? `${cls} ${resizeClass}` : cls.replace(resizeClass, '')).trim();
+          });
+      };
+
       const el = isElement(elem) ? elem : model.getEl();
-      options = {
+      const options: ResizerOptions = {
         // Here the resizer is updated with the current element height and width
         onStart(e: Event, opts: any = {}) {
           const { el, config, resizer } = opts;
@@ -467,14 +489,13 @@ export default {
           modelToStyle.addStyle(finalStyle, { avoidStore: !store });
           em.Styles.__emitCmpStyleUpdate(finalStyle, { components: em.getSelected() });
         },
+        ...(isObject(resizable) ? resizable : {}),
       };
-
-      if (typeof resizable == 'object') {
-        options = { ...options, ...resizable, parent: options };
-      }
 
       this.resizer = editor.runCommand('resize', { el, options, force: 1 });
     } else {
+      if (hasCustomResize) return;
+
       editor.stopCommand('resize');
       this.resizer = null;
     }
@@ -485,14 +506,16 @@ export default {
    * @param {Object} mod
    */
   updateToolbar(mod: Component) {
+    const { canvas } = this;
     const { em } = this.config;
-    const model = mod == em ? em.getSelected() : mod;
-    const toolbarEl = this.canvas.getToolbarEl()!;
+    const model = mod === em ? em.getSelected() : mod;
+    const toolbarEl = canvas.getToolbarEl()!;
     const toolbarStyle = toolbarEl.style;
     const toolbar = model.get('toolbar');
     const showToolbar = em.config.showToolbar;
+    const noCustomSpotSelect = !canvas.hasCustomSpot(CanvasSpotBuiltInTypes.Select);
 
-    if (model && showToolbar && toolbar && toolbar.length) {
+    if (model && showToolbar && toolbar && toolbar.length && noCustomSpotSelect) {
       toolbarStyle.display = '';
       if (!this.toolbar) {
         toolbarEl.innerHTML = '';
@@ -546,6 +569,11 @@ export default {
    */
   onFrameScroll() {
     this.updateTools();
+    this.canvas.refreshSpots();
+  },
+
+  onFrameResize() {
+    this.canvas.refreshSpots();
   },
 
   updateTools() {
@@ -574,10 +602,11 @@ export default {
     const isHoverEn = component.get('hoverable');
     const isNewEl = this.lastHovered !== el;
     const badgeOpts = isNewEl ? {} : { posOnly: 1 };
+    const customHoverSpot = this.canvas.hasCustomSpot(CanvasSpotBuiltInTypes.Hover);
 
     if (isNewEl && isHoverEn) {
       this.lastHovered = el;
-      this.showHighlighter(view);
+      customHoverSpot ? this.hideHighlighter(view) : this.showHighlighter(view);
       this.showElementOffset(el, pos, { view });
     }
 
@@ -593,12 +622,13 @@ export default {
     const topOff = frameOff.top;
     const leftOff = frameOff.left;
 
-    this.updateBadge(el, pos, {
-      ...badgeOpts,
-      view,
-      topOff,
-      leftOff,
-    });
+    !customHoverSpot &&
+      this.updateBadge(el, pos, {
+        ...badgeOpts,
+        view,
+        topOff,
+        leftOff,
+      });
 
     style.top = topOff + unit;
     style.left = leftOff + unit;

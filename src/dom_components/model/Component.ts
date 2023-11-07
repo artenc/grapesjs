@@ -174,6 +174,14 @@ export default class Component extends StyleableModel<ComponentProperties> {
     return this.get('content') ?? '';
   }
 
+  get toolbar() {
+    return this.get('toolbar') || [];
+  }
+
+  get resizable() {
+    return this.get('resizable')!;
+  }
+
   /**
    * Hook method, called once the model is created
    */
@@ -1707,7 +1715,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @param {Frame} frame Specific frame from which taking the element
    * @return {HTMLElement}
    */
-  getEl(frame = undefined) {
+  getEl(frame?: Frame) {
     const view = this.getView(frame);
     return view && view.el;
   }
@@ -1719,17 +1727,19 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @return {ComponentView}
    */
   getView(frame?: Frame) {
-    let { view, views } = this;
+    let { view, views, em } = this;
+    const frm = frame || em?.getCurrentFrameModel();
 
-    if (frame) {
-      view = views.filter(view => view._getFrame() === frame.view)[0];
+    if (frm) {
+      view = views.filter(view => view.frameView === frm.view)[0];
     }
 
     return view;
   }
 
   getCurrentView() {
-    const frame = (this.em.get('currentFrame') || {}).model;
+    const frameView = this.em.getCurrentFrame();
+    const frame = frameView?.model;
     return this.getView(frame);
   }
 

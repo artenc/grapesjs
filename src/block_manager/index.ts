@@ -44,16 +44,17 @@
  *
  * @module Blocks
  */
-import { isArray, debounce } from 'underscore';
+import { debounce, isArray } from 'underscore';
+import { ItemManagerModule } from '../abstract/Module';
+import FrameView from '../canvas/view/FrameView';
+import Component from '../dom_components/model/Component';
+import EditorModel from '../editor/model/Editor';
 import defaults, { BlockManagerConfig } from './config/config';
 import Block, { BlockProperties } from './model/Block';
 import Blocks from './model/Blocks';
-import Category from './model/Category';
 import Categories from './model/Categories';
+import Category from './model/Category';
 import BlocksView from './view/BlocksView';
-import { ItemManagerModule } from '../abstract/Module';
-import EditorModel from '../editor/model/Editor';
-import Component from '../dom_components/model/Component';
 
 export type BlockEvent =
   | 'block:add'
@@ -194,11 +195,10 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
     }
   }
 
-  __getFrameViews() {
-    return this.em
-      .get('Canvas')
-      .getFrames()
-      .map((frame: any) => frame.view);
+  __getFrameViews(): FrameView[] {
+    return this.em.Canvas.getFrames()
+      .map(frame => frame.view!)
+      .filter(Boolean);
   }
 
   __behaviour(opts = {}) {
@@ -214,11 +214,11 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
 
   startDrag(block: Block, ev?: Event) {
     this.__startDrag(block, ev);
-    this.__getFrameViews().forEach((fv: any) => fv.droppable.startCustom());
+    this.__getFrameViews().forEach(fv => fv.droppable?.startCustom());
   }
 
   endDrag(cancel?: boolean) {
-    this.__getFrameViews().forEach((fv: any) => fv.droppable.endCustom(cancel));
+    this.__getFrameViews().forEach(fv => fv.droppable?.endCustom(cancel));
     this.__endDrag();
   }
 
@@ -352,7 +352,7 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
    * const newBlocksEl = blockManager.render(filtered, { external: true });
    * document.getElementById('some-id').appendChild(newBlocksEl);
    */
-  render(blocks: Block[], opts: { external?: boolean } = {}) {
+  render(blocks?: Block[], opts: { external?: boolean } = {}) {
     const { categories, config, em } = this;
     const toRender = blocks || this.getAll().models;
 

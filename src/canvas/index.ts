@@ -18,52 +18,33 @@
  * const canvas = editor.Canvas;
  * canvas.setCoords(...);
  * ```
- * ## Available Events
- * * `canvas:dragenter` - When something is dragged inside the canvas, `DataTransfer` instance passed as an argument
- * * `canvas:dragover` - When something is dragging on canvas, `DataTransfer` instance passed as an argument
- * * `canvas:drop` - Something is dropped in canvas, `DataTransfer` instance and the dropped model are passed as arguments
- * * `canvas:dragend` - When a drag operation is ended, `DataTransfer` instance passed as an argument
- * * `canvas:dragdata` - On any dataTransfer parse, `DataTransfer` instance and the `result` are passed as arguments.
- *  By changing `result.content` you're able to customize what is dropped
  *
- * ## Methods
- * * [getConfig](#getconfig)
- * * [getElement](#getelement)
- * * [getFrameEl](#getframeel)
- * * [getWindow](#getwindow)
- * * [getDocument](#getdocument)
- * * [getBody](#getbody)
- * * [setCustomBadgeLabel](#setcustombadgelabel)
- * * [hasFocus](#hasfocus)
- * * [scrollTo](#scrollto)
- * * [setZoom](#setzoom)
- * * [getZoom](#getzoom)
- * * [getCoords](#getcoords)
- * * [setCoords](#setcoords)
+ * {REPLACE_EVENTS}
  *
  * [Component]: component.html
  * [Frame]: frame.html
+ * [CanvasSpot]: canvas_spot.html
  *
  * @module Canvas
  */
 
-import { isUndefined } from 'underscore';
+import { isArray, isUndefined } from 'underscore';
 import { Module } from '../abstract';
-import { Coordinates } from '../common';
+import { AddOptions, Coordinates } from '../common';
 import Component from '../dom_components/model/Component';
+import ComponentView from '../dom_components/view/ComponentView';
 import EditorModel from '../editor/model/Editor';
 import { getElement, getViewEl } from '../utils/mixins';
 import defaults, { CanvasConfig } from './config/config';
 import Canvas from './model/Canvas';
+import CanvasSpot, { CanvasSpotBuiltInTypes, CanvasSpotProps } from './model/CanvasSpot';
+import CanvasSpots from './model/CanvasSpots';
 import Frame from './model/Frame';
+import { CanvasEvents, ToWorldOption } from './types';
 import CanvasView, { FitViewportOptions } from './view/CanvasView';
 import FrameView from './view/FrameView';
 
-export type CanvasEvent = 'canvas:dragenter' | 'canvas:dragover' | 'canvas:drop' | 'canvas:dragend' | 'canvas:dragdata';
-
-export interface ToWorldOption {
-  toWorld?: boolean;
-}
+export type CanvasEvent = `${CanvasEvents}`;
 
 export default class CanvasModule extends Module<CanvasConfig> {
   /**
@@ -81,9 +62,11 @@ export default class CanvasModule extends Module<CanvasConfig> {
     return this.canvasView as any;
   }
 
-  //name = 'Canvas';
   canvas: Canvas;
   model: Canvas;
+  spots: CanvasSpots;
+  events = CanvasEvents;
+  framesById: Record<string, Frame | undefined> = {};
   private canvasView?: CanvasView;
 
   /**
@@ -95,6 +78,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
     super(em, 'Canvas', defaults);
 
     this.canvas = new Canvas(this);
+    this.spots = new CanvasSpots(this);
     this.model = this.canvas;
     this.startAutoscroll = this.startAutoscroll.bind(this);
     this.stopAutoscroll = this.stopAutoscroll.bind(this);
@@ -161,10 +145,10 @@ export default class CanvasModule extends Module<CanvasConfig> {
     return doc?.body as HTMLBodyElement;
   }
 
-  _getLocalEl(globalEl: any, compView: any, method: keyof FrameView) {
+  _getLocalEl(globalEl: any, compView: ComponentView, method: keyof FrameView) {
     let result = globalEl;
-    const frameView = compView?._getFrame();
-    result = frameView ? frameView[method]() : result;
+    const frameView = compView?.frameView;
+    result = frameView ? (frameView as any)[method]() : result;
 
     return result;
   }
@@ -257,6 +241,10 @@ export default class CanvasModule extends Module<CanvasConfig> {
    */
   getFixedOffsetViewerEl() {
     return this.getCanvasView().fixedOffsetEl;
+  }
+
+  getSpotsEl() {
+    return this.canvasView?.spotsEl;
   }
 
   render(): HTMLElement {
@@ -649,6 +637,19 @@ export default class CanvasModule extends Module<CanvasConfig> {
     return { x, y };
   }
 
+  /**
+   * Get canvas pointer position coordinates.
+   * @returns {Object} Object containing pointer coordinates
+   * @private
+   * @example
+   * const worldPointer = canvas.getPointer();
+   * const screenPointer = canvas.getPointer(true);
+   */
+  getPointer(screen?: boolean): Coordinates {
+    const { pointer, pointerScreen } = this.canvas.attributes;
+    return screen ? pointerScreen : pointer;
+  }
+
   getZoomDecimal() {
     return this.getZoom() / 100;
   }
@@ -675,6 +676,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
    * Add new frame to the canvas
    * @param {Object} props Frame properties
    * @returns {[Frame]}
+   * @private
    * @example
    * canvas.addFrame({
    *   name: 'Mobile home page',
@@ -703,6 +705,136 @@ export default class CanvasModule extends Module<CanvasConfig> {
    */
   getLastDragResult(): Component | undefined {
     return this.em.get('dragResult');
+  }
+
+  /**
+   * Add or update canvas spot.
+   * @param {Object} props Canvas spot properties.
+   * @param opts
+   * @returns {[CanvasSpot]}
+   * @example
+   * // Add new canvas spot
+   * const spot = canvas.addSpot({
+   *  type: 'select', // 'select' is one of the built-in spots
+   *  component: editor.getSelected(),
+   * });
+   *
+   * // Add custom canvas spot
+   * const spot = canvas.addSpot({
+   *  type: 'my-custom-spot',
+   *  component: editor.getSelected(),
+   * });
+   * // Update the same spot by reusing its ID
+   * canvas.addSpot({
+   *  id: spot.id,
+   *  component: anotherComponent,
+   * });
+   */
+  addSpot<T extends CanvasSpotProps>(props: Omit<T, 'id'> & { id?: string }, opts: AddOptions = {}) {
+    const spotProps = props as T;
+    const spots = this.getSpots<T>(spotProps);
+
+    if (spots.length) {
+      const spot = spots[0];
+      spot.set(spotProps);
+      return spot;
+    }
+
+    const cmpView = spotProps.componentView || spotProps.component?.view;
+    const spot = new CanvasSpot<T>(this, {
+      ...spotProps,
+      id: spotProps.id || `cs_${spotProps.type}_${cmpView?.cid}`,
+      type: spotProps.type || '',
+    } as T);
+
+    this.spots.add(spot, opts);
+
+    return spot;
+  }
+
+  /**
+   * Get canvas spots.
+   * @param {Object} [spotProps] Canvas spot properties for filtering the result. With no properties, all available spots will be returned.
+   * @returns {[CanvasSpot][]}
+   * @example
+   * canvas.addSpot({ type: 'select', component: cmp1 });
+   * canvas.addSpot({ type: 'select', component: cmp2 });
+   * canvas.addSpot({ type: 'target', component: cmp3 });
+   *
+   * // Get all spots
+   * const allSpots = canvas.getSpots();
+   * allSpots.length; // 3
+   *
+   * // Get all 'select' spots
+   * const allSelectSpots = canvas.getSpots({ type: 'select' });
+   * allSelectSpots.length; // 2
+   */
+  getSpots<T extends CanvasSpotProps>(spotProps: Partial<T> = {}) {
+    return this.spots.where(spotProps.id ? { id: spotProps.id } : spotProps) as CanvasSpot<T>[];
+  }
+
+  /**
+   * Remove canvas spots.
+   * @param {Object|[CanvasSpot][]} [spotProps] Canvas spot properties for filtering spots to remove or an array of spots to remove. With no properties, all available spots will be removed.
+   * @returns {[CanvasSpot][]}
+   * @example
+   * canvas.addSpot({ type: 'select', component: cmp1 });
+   * canvas.addSpot({ type: 'select', component: cmp2 });
+   * canvas.addSpot({ type: 'target', component: cmp3 });
+   *
+   * // Remove all 'select' spots
+   * canvas.removeSpots({ type: 'select' });
+   *
+   * // Remove spots by an array of canvas spots
+   * const filteredSpots = canvas.getSpots().filter(spot => myCustomCondition);
+   * canvas.removeSpots(filteredSpots);
+   *
+   * // Remove all spots
+   * canvas.removeSpots();
+   */
+  removeSpots<T extends CanvasSpotProps>(spotProps: Partial<T> | CanvasSpot[] = {}) {
+    const spots = isArray(spotProps) ? spotProps : this.getSpots(spotProps);
+    const removed = this.spots.remove(spots);
+    return removed as unknown as CanvasSpot<T>[];
+  }
+
+  /**
+   * Check if the built-in canvas spot has a declared custom rendering.
+   * @param {String} type Built-in canvas spot type
+   * @returns {Boolean}
+   * @example
+   * grapesjs.init({
+   *  // ...
+   *  canvas: {
+   *    // avoid rendering the built-in 'target' canvas spot
+   *    customSpots: { target: true }
+   *  }
+   * });
+   * // ...
+   * canvas.hasCustomSpot('select'); // false
+   * canvas.hasCustomSpot('target'); // true
+   */
+  hasCustomSpot(type?: CanvasSpotBuiltInTypes) {
+    const { customSpots } = this.config;
+
+    if (customSpots === true || (customSpots && type && customSpots[type])) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Transform a box rect from the world coordinate system to the screen one.
+   * @param {Object} boxRect
+   * @returns {Object}
+   */
+  getWorldRectToScreen(boxRect: Parameters<CanvasView['getRectToScreen']>[0]) {
+    return this.canvasView?.getRectToScreen(boxRect);
+  }
+
+  refreshSpots() {
+    this.spots.refresh();
   }
 
   destroy() {

@@ -1,4 +1,5 @@
 import Component from '../../dom_components/model/Component';
+import { CanvasSpotBuiltInTypes } from '../model/CanvasSpot';
 
 export interface CanvasConfig {
   stylePrefix?: string;
@@ -70,6 +71,24 @@ export interface CanvasConfig {
    * @default true
    */
   allowExternalDrop?: boolean;
+
+  /**
+   * Disable the rendering of built-in canvas spots.
+   *
+   * Read here for more information about [Canvas Spots](https://grapesjs.com/docs/modules/Canvas.html#canvas-spots).
+   * @example
+   * // Disable only the hover type spot
+   * customSpots: { hover: true },
+   *
+   * // Disable all built-in spots
+   * customSpots: true,
+   */
+  customSpots?: boolean | Partial<Record<CanvasSpotBuiltInTypes, boolean>>;
+
+  /**
+   * Experimental: enable infinite canvas.
+   */
+  infiniteCanvas?: boolean;
 }
 
 const config: CanvasConfig = {

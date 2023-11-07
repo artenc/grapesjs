@@ -1,10 +1,10 @@
-import { extend, bindAll } from 'underscore';
+import { bindAll, extend } from 'underscore';
 import { $ } from '../../common';
-import { on, off } from '../../utils/mixins';
+import Component from '../../dom_components/model/Component';
+import { off, on } from '../../utils/dom';
+import { CommandObject } from './CommandAbstract';
 import SelectComponent from './SelectComponent';
 import SelectPosition from './SelectPosition';
-import { CommandObject } from './CommandAbstract';
-import Component from '../../dom_components/model/Component';
 
 export default extend({}, SelectPosition, SelectComponent, {
   init(o: any) {
@@ -92,8 +92,8 @@ export default extend({}, SelectPosition, SelectComponent, {
     // Avoid badge showing on move
     this.cacheEl = null;
     const lastModel = models[models.length - 1];
-    const frame = (this.em.get('currentFrame') || {}).model;
-    const el = lastModel.getEl(frame)!;
+    const frameView = this.em.getCurrentFrame();
+    const el = lastModel.getEl(frameView?.model)!;
     const doc = el.ownerDocument;
     this.startSelectPosition(el, doc, { onStart: this.onStart });
     this.sorter.draggable = lastModel.get('draggable');

@@ -1,11 +1,11 @@
-import { isString, isFunction, isArray, result, each, bindAll } from 'underscore';
-import { on, off, matches, getElement, getPointerEvent, isTextNode, getModel } from './mixins';
-import { View, Model, Collection, $ } from '../common';
-import EditorModel from '../editor/model/Editor';
+import { bindAll, each, isArray, isFunction, isString, result } from 'underscore';
 import { BlockProperties } from '../block_manager/model/Block';
 import CanvasModule from '../canvas';
-
-const noop = () => {};
+import { CanvasSpotBuiltInTypes } from '../canvas/model/CanvasSpot';
+import { $, Collection, Model, View } from '../common';
+import EditorModel from '../editor/model/Editor';
+import { getPointerEvent, isTextNode, off, on } from './dom';
+import { getElement, getModel, matches } from './mixins';
 
 type DropContent = BlockProperties['content'];
 
@@ -54,6 +54,15 @@ export interface SorterOptions {
   avoidSelectOnEnd?: boolean;
   scale?: number;
 }
+
+const noop = () => {};
+
+const targetSpotType = CanvasSpotBuiltInTypes.Target;
+
+const spotTarget = {
+  id: 'sorter-target',
+  type: targetSpotType,
+};
 
 export default class Sorter extends View {
   opt!: SorterOptions;
@@ -395,7 +404,7 @@ export default class Sorter extends View {
 
     if (src) {
       srcModel = this.getSourceModel(src);
-      srcModel && srcModel.set && srcModel.set('status', 'freezed');
+      srcModel?.set && srcModel.set('status', 'freezed');
       this.srcModel = srcModel;
     }
 
@@ -487,7 +496,11 @@ export default class Sorter extends View {
       targetModel.set('status', '');
     }
 
-    if (model && model.set) {
+    if (model?.set) {
+      const cv = this.em!.Canvas;
+      const { Select, Hover, Spacing } = CanvasSpotBuiltInTypes;
+      [Select, Hover, Spacing].forEach(type => cv.removeSpots({ type }));
+      cv.addSpot({ ...spotTarget, component: model as any });
       model.set('status', 'selected-parent');
       this.targetModel = model;
     }
@@ -599,7 +612,7 @@ export default class Sorter extends View {
    * @return {Boolean}
    * @private
    * */
-  isInFlow(el: HTMLElement, parent: HTMLElement) {
+  isInFlow(el: HTMLElement, parent?: HTMLElement) {
     if (!el) return false;
 
     parent = parent || document.body;
@@ -726,7 +739,7 @@ export default class Sorter extends View {
    * @param {number} rY Relative Y position
    * @return {Array<Array>}
    */
-  dimsFromTarget(target: HTMLElement, rX: number, rY: number): Dim[] {
+  dimsFromTarget(target: HTMLElement, rX = 0, rY = 0): Dim[] {
     const em = this.em;
     let dims: Dim[] = [];
 
@@ -1207,6 +1220,7 @@ export default class Sorter extends View {
     this.disableTextable();
     this.selectTargetModel();
     this.toggleSortCursor();
+    this.em?.Canvas.removeSpots(spotTarget);
 
     delete this.toMove;
     delete this.eventMove;

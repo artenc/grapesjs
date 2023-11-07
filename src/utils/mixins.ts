@@ -1,5 +1,9 @@
-import { keys, isUndefined, isElement, isArray } from 'underscore';
+import { isArray, isElement, isUndefined, keys } from 'underscore';
+import ComponentView from '../dom_components/view/ComponentView';
 import EditorModel from '../editor/model/Editor';
+import { isTextNode } from './dom';
+import Component from '../dom_components/model/Component';
+import { ObjectAny } from '../common';
 
 export const isDef = (value: any) => typeof value !== 'undefined';
 
@@ -57,8 +61,8 @@ const appendStyles = (styles: {}, opts: { unique?: boolean; prepand?: boolean } 
  * shallowDiff(a, b);
  * // -> {baz: 2, faz: null, bar: ''};
  */
-const shallowDiff = (objOrig: Record<string, any>, objNew: Record<string, any>) => {
-  const result: Record<string, any> = {};
+const shallowDiff = (objOrig: ObjectAny, objNew: ObjectAny) => {
+  const result: ObjectAny = {};
   const keysNew = keys(objNew);
 
   for (let prop in objOrig) {
@@ -85,34 +89,6 @@ const shallowDiff = (objOrig: Record<string, any>, objNew: Record<string, any>) 
   }
 
   return result;
-};
-
-const on = (
-  el: HTMLElement | Window | Document | (Window | HTMLElement | Document)[],
-  ev: string,
-  fn: (ev: Event) => void,
-  opts?: AddEventListenerOptions
-) => {
-  const evs = ev.split(/\s+/);
-  el = el instanceof Array ? el : [el];
-
-  for (let i = 0; i < evs.length; ++i) {
-    el.forEach(elem => elem && elem.addEventListener(evs[i], fn, opts));
-  }
-};
-
-const off = (
-  el: HTMLElement | Window | Document | (Window | HTMLElement | Document)[],
-  ev: string,
-  fn: (ev: Event) => void,
-  opts?: AddEventListenerOptions
-) => {
-  const evs = ev.split(/\s+/);
-  el = el instanceof Array ? el : [el];
-
-  for (let i = 0; i < evs.length; ++i) {
-    el.forEach(elem => elem && elem.removeEventListener(evs[i], fn, opts));
-  }
 };
 
 const getUnitFromValue = (value: any) => {
@@ -157,27 +133,6 @@ const getElement = (el: HTMLElement) => {
   }
 };
 
-/**
- * Check if element is a text node
- * @param  {HTMLElement} el
- * @return {Boolean}
- */
-const isTextNode = (el: HTMLElement) => el && el.nodeType === 3;
-
-/**
- * Check if element is a comment node
- * @param  {HTMLElement} el
- * @return {Boolean}
- */
-export const isCommentNode = (el: HTMLElement) => el && el.nodeType === 8;
-
-/**
- * Check if element is a comment node
- * @param  {HTMLElement} el
- * @return {Boolean}
- */
-export const isTaggableNode = (el: HTMLElement) => el && !isTextNode(el) && !isCommentNode(el);
-
 export const find = (arr: any[], test: (item: any, i: number, arr: any[]) => boolean) => {
   let result = null;
   arr.some((el, i) => (test(el, i, arr) ? ((result = el), 1) : 0));
@@ -198,7 +153,7 @@ export const escapeNodeContent = (str = '') => {
   return `${str}`.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 };
 
-export const deepMerge = (...args: Record<string, any>[]) => {
+export const deepMerge = (...args: ObjectAny[]) => {
   const target = { ...args[0] };
 
   for (let i = 1; i < args.length; i++) {
@@ -234,52 +189,20 @@ const getModel = (el: any, $?: any) => {
   return model;
 };
 
-const getElRect = (el?: HTMLElement) => {
-  const def = {
-    top: 0,
-    left: 0,
-    width: 0,
-    height: 0,
-  };
-  if (!el) return def;
-  let rectText;
-
-  if (isTextNode(el)) {
-    const range = document.createRange();
-    range.selectNode(el);
-    rectText = range.getBoundingClientRect();
-    range.detach();
-  }
-
-  return rectText || (el.getBoundingClientRect ? el.getBoundingClientRect() : def);
-};
-
-/**
- * Get cross-device pointer event
- * @param  {Event} ev
- * @return {PointerEvent}
- */
-const getPointerEvent = (ev: Event) =>
-  // @ts-ignore
-  ev.touches && ev.touches[0] ? ev.touches[0] : ev;
-
-/**
- * Get cross-browser keycode
- * @param  {Event} ev
- * @return {Number}
- */
-const getKeyCode = (ev: KeyboardEvent) => ev.which || ev.keyCode;
-const getKeyChar = (ev: KeyboardEvent) => String.fromCharCode(getKeyCode(ev));
-const isEscKey = (ev: KeyboardEvent) => getKeyCode(ev) === 27;
-const isEnterKey = (ev: KeyboardEvent) => getKeyCode(ev) === 13;
-const isObject = (val: any): val is Object => val !== null && !Array.isArray(val) && typeof val === 'object';
-const isEmptyObj = (val: Record<string, any>) => Object.keys(val).length <= 0;
+const isObject = (val: any): val is ObjectAny => val && !Array.isArray(val) && typeof val === 'object';
+const isEmptyObj = (val: ObjectAny) => Object.keys(val).length <= 0;
 
 const capitalize = (str: string = '') => str && str.charAt(0).toUpperCase() + str.substring(1);
-const isComponent = (obj: any) => obj && obj.toHTML;
 const isRule = (obj: any) => obj && obj.toCSS;
 
-const getViewEl = (el: any) => el.__gjsv;
+const getViewEl = <T extends any>(el?: Node): T | undefined => (el as any)?.__gjsv;
+
+export const isComponent = (obj: any): obj is Component => !!obj?.toHTML;
+
+export const getComponentView = (el?: Node) => getViewEl<ComponentView>(el);
+
+export const getComponentModel = (el?: Node) => getComponentView(el)?.model;
+
 const setViewEl = (el: any, view: any) => {
   el.__gjsv = view;
 };
@@ -311,23 +234,14 @@ export const buildBase64UrlFromSvg = (svg: string) => {
 };
 
 export {
-  on,
-  off,
   hasDnd,
   upFirst,
   matches,
   getModel,
-  getElRect,
   camelCase,
-  isTextNode,
-  getKeyCode,
-  getKeyChar,
-  isEscKey,
-  isEnterKey,
   getElement,
   shallowDiff,
   normalizeFloat,
-  getPointerEvent,
   getUnitFromValue,
   capitalize,
   getViewEl,
@@ -335,7 +249,6 @@ export {
   appendStyles,
   isObject,
   isEmptyObj,
-  isComponent,
   createId,
   isRule,
 };

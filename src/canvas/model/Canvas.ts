@@ -1,9 +1,10 @@
-import { ModuleModel } from '../../abstract';
-import { evPageSelect } from '../../pages';
-import { evUpdate as evDeviceUpdate } from '../../device_manager';
-import Frames from './Frames';
-import Page from '../../pages/model/Page';
 import CanvasModule from '..';
+import { ModuleModel } from '../../abstract';
+import { Coordinates, CoordinatesTypes, DEFAULT_COORDS } from '../../common';
+import { evUpdate as evDeviceUpdate } from '../../device_manager';
+import { evPageSelect } from '../../pages';
+import Page from '../../pages/model/Page';
+import Frames from './Frames';
 
 export default class Canvas extends ModuleModel<CanvasModule> {
   defaults() {
@@ -18,6 +19,8 @@ export default class Canvas extends ModuleModel<CanvasModule> {
       scripts: [],
       // Styles to apply on all frames
       styles: [],
+      pointer: DEFAULT_COORDS,
+      pointerScreen: DEFAULT_COORDS,
     };
   }
 
@@ -26,7 +29,9 @@ export default class Canvas extends ModuleModel<CanvasModule> {
     const { scripts, styles } = config;
     super(module, { scripts, styles });
     this.set('frames', new Frames(module));
-    this.listenTo(this, 'change:zoom', this.onZoomChange);
+    this.on('change:zoom', this.onZoomChange);
+    this.on('change:x change:y', this.onCoordsChange);
+    this.on('change:pointer change:pointerScreen', this.onPointerChange);
     this.listenTo(em, `change:device ${evDeviceUpdate}`, this.updateDevice);
     this.listenTo(em, evPageSelect, this._pageUpdated);
   }
@@ -63,7 +68,24 @@ export default class Canvas extends ModuleModel<CanvasModule> {
   }
 
   onZoomChange() {
+    const { em, module } = this;
     const zoom = this.get('zoom');
     zoom < 1 && this.set('zoom', 1);
+    em.trigger(module.events.zoom);
+  }
+
+  onCoordsChange() {
+    const { em, module } = this;
+    em.trigger(module.events.coords);
+  }
+
+  onPointerChange() {
+    const { em, module } = this;
+    em.trigger(module.events.pointer);
+  }
+
+  getPointerCoords(type: CoordinatesTypes = CoordinatesTypes.World): Coordinates {
+    const { pointer, pointerScreen } = this.attributes;
+    return type === CoordinatesTypes.World ? pointer : pointerScreen;
   }
 }

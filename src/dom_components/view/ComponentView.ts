@@ -1,4 +1,5 @@
 import { each, isEmpty, keys, result } from 'underscore';
+import { CanvasSpotBuiltInTypes } from '../../canvas/model/CanvasSpot';
 import FrameView from '../../canvas/view/FrameView';
 import { ExtractMethods, ObjectAny, View } from '../../common';
 import { GetSetRuleOptions } from '../../css_composer';
@@ -14,13 +15,6 @@ import { ComponentOptions } from '../model/types';
 import ComponentsView from './ComponentsView';
 
 type ClbObj = ReturnType<ComponentView['_clbObj']>;
-
-interface Rect {
-  top?: number;
-  left?: number;
-  bottom?: number;
-  right?: number;
-}
 
 export interface IComponentView extends ExtractMethods<ComponentView> {}
 
@@ -80,7 +74,7 @@ Component> {
     $el.data('model', model);
     setViewEl(el, this);
     model.view = this;
-    this._getFrame() && model.views.push(this);
+    this.frameView && model.views.push(this);
     this.initClasses();
     this.initComponents({ avoidRender: true });
     this.events = {
@@ -143,7 +137,7 @@ Component> {
     super.remove();
     const { model, $el } = this;
     const { views } = model;
-    const frame = this._getFrame() || {};
+    const frame = this.frameView || {};
     model.components().forEach(comp => {
       const view = comp.getView(frame.model);
       view?.remove();
@@ -168,13 +162,13 @@ Component> {
 
   initClasses() {
     const { model } = this;
+    const { classes } = model;
     const event = 'change:classes';
-    const classes = model.get('classes');
 
     if (classes instanceof Selectors) {
       this.stopListening(model, event, this.initClasses);
       this.listenTo(model, event, this.initClasses);
-      this.listenTo(classes, 'add remove change', this.updateClasses);
+      this.listenTo(classes, 'add remove change reset', this.updateClasses);
       classes.length && this.importClasses();
     }
   }
@@ -215,13 +209,9 @@ Component> {
    * @private
    * */
   importClasses() {
-    const clm = this.em.Selectors;
-
-    if (clm) {
-      this.model.classes.each(m => {
-        clm.add(m.get('name'));
-      });
-    }
+    const { em, model } = this;
+    const sm = em.Selectors;
+    sm && model.classes.forEach(s => sm.add(s.get('name')));
   }
 
   /**
@@ -231,7 +221,8 @@ Component> {
    * */
   updateStatus(opts: { noExtHl?: boolean; avoidHover?: boolean } = {}) {
     const { em, el, ppfx, model } = this;
-    const extHl = em?.Canvas.getConfig().extHl;
+    const canvas = em?.Canvas;
+    const extHl = canvas?.config.extHl;
     const status = model.get('status');
     const selectedCls = `${ppfx}selected`;
     const selectedParentCls = `${selectedCls}-parent`;
@@ -243,19 +234,22 @@ Component> {
     this.$el.removeClass(toRemove.join(' '));
     const actualCls = el.getAttribute('class') || '';
     const cls = [actualCls];
+    const noCustomSpotSelect = !canvas?.hasCustomSpot(CanvasSpotBuiltInTypes.Select);
+    const noCustomSpotTarget = !canvas?.hasCustomSpot(CanvasSpotBuiltInTypes.Target);
 
     switch (status) {
       case 'selected':
-        cls.push(selCls);
+        noCustomSpotSelect && cls.push(selCls);
         break;
       case 'selected-parent':
-        cls.push(selectedParentCls);
+        noCustomSpotTarget && cls.push(selectedParentCls);
         break;
       case 'freezed':
         cls.push(freezedCls);
         break;
       case 'freezed-selected':
-        cls.push(freezedCls, selCls);
+        cls.push(freezedCls);
+        noCustomSpotSelect && cls.push(selCls);
         break;
       case 'hovered':
         !opts.avoidHover && cls.push(hoveredCls);
@@ -432,7 +426,7 @@ Component> {
    * have to take in account offsetParent
    */
   getOffsetRect() {
-    const rect: Rect = {};
+    const rect = { top: 0, left: 0, bottom: 0, right: 0 };
     const target = this.el;
     let gtop = 0;
     let gleft = 0;
@@ -456,32 +450,38 @@ Component> {
     return rect;
   }
 
-  isInViewport({ rect }: { rect?: Rect } = {}) {
-    const { el } = this;
-    const elDoc = el.ownerDocument;
-    const { body } = elDoc;
-    const frameElement = elDoc.defaultView?.frameElement as HTMLIFrameElement;
-    const { top, left } = rect || this.getOffsetRect();
-    const frame = this._getFrame().getOffsetRect();
+  isInViewport() {
+    const { el, em, frameView } = this;
+    const canvasView = em.Canvas.getCanvasView();
+    const elRect = canvasView.getElBoxRect(el, { local: true });
+    const frameEl = frameView.el;
+    const frameH = frameEl.clientHeight;
+    const frameW = frameEl.clientWidth;
 
-    return (
-      top! >= frame.scrollTop &&
-      left! >= frame.scrollLeft &&
-      top! <= frame.scrollBottom &&
-      left! <= frameElement?.offsetWidth + body.scrollLeft
-    );
+    const elTop = elRect.y;
+    const elRight = elRect.x;
+    const elBottom = elTop + elRect.height;
+    const elLeft = elRight + elRect.width;
+    const isTopInside = elTop >= 0 && elTop < frameH;
+    const isBottomInside = elBottom > 0 && elBottom < frameH;
+    const isLeftInside = elLeft >= 0 && elLeft < frameW;
+    const isRightInside = elRight > 0 && elRight <= frameW;
+
+    const partiallyIn = (isTopInside || isBottomInside) && (isLeftInside || isRightInside);
+
+    return partiallyIn;
   }
 
   scrollIntoView(opts: { force?: boolean } & ScrollIntoViewOptions = {}) {
-    const rect = this.getOffsetRect();
-    const isInViewport = this.isInViewport({ rect });
+    const isInViewport = this.isInViewport();
 
     if (!isInViewport || opts.force) {
       const { el } = this;
 
       // PATCH: scrollIntoView won't work with multiple requests from iframes
       if (opts.behavior !== 'smooth') {
-        el.ownerDocument.defaultView?.scrollTo(0, rect.top!);
+        const rect = this.getOffsetRect();
+        el.ownerDocument.defaultView?.scrollTo(0, rect.top);
       } else {
         el.scrollIntoView({
           behavior: 'smooth',
@@ -510,10 +510,6 @@ Component> {
     const collection = model.components();
     const view = this;
     this.$el.data({ model, collection, view });
-  }
-
-  _getFrame() {
-    return this.em?.get('Canvas').config.frameView;
   }
 
   /**
