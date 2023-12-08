@@ -16049,11 +16049,11 @@ var evName = 'dmode';
         var top = originRect.top, height = originRect.height, left = originRect.left, width = originRect.width;
         // @ts-ignore
         var guides = [
-            { type: 't', y: top },
-            { type: 'b', y: top + height },
-            { type: 'l', x: left },
-            { type: 'r', x: left + width },
-            { type: 'x', x: left + width / 2 },
+            { type: 't', y: top }, // Top
+            { type: 'b', y: top + height }, // Bottom
+            { type: 'l', x: left }, // Left
+            { type: 'r', x: left + width }, // Right
+            { type: 'x', x: left + width / 2 }, // Mid x
             { type: 'y', y: top + height / 2 }, // Mid y
         ].map(function (item) { return (__assign(__assign({}, item), { origin: el, originRect: originRect, guide: opts.debug && _this.renderGuide(item) })); });
         guides.forEach(function (item) { var _a; return (_a = _this.guides) === null || _a === void 0 ? void 0 : _a.push(item); });
@@ -30762,13 +30762,13 @@ var Component = /** @class */ (function (_super) {
                     hoverable: true,
                     locked: false,
                     void: false,
-                    state: '',
-                    status: '',
+                    state: '', // Indicates if the component is in some CSS state like ':hover', ':active', etc.
+                    status: '', // State, eg. 'selected'
                     content: '',
                     icon: '',
                     style: '',
-                    styles: '',
-                    classes: '',
+                    styles: '', // Component related styles
+                    classes: '', // Array of classes
                     script: '',
                     'script-props': '',
                     'script-export': '',
@@ -40852,7 +40852,6 @@ src_Promise._unhandledRejectionFn = function _unhandledRejectionFn(err) {
     console.warn('Possible Unhandled Promise Rejection:', err); // eslint-disable-line no-console
   }
 };
-
 /* harmony default export */ const src = (src_Promise);
 ;// CONCATENATED MODULE: ./src/utils/fetch.ts
 // @ts-ignore avoid errors during TS build
@@ -42482,7 +42481,7 @@ var TraitNumberView = /** @class */ (function (_super) {
         clearText: 'Clear Color Selection',
         noColorSelectedText: 'No Color Selected',
         preferredFormat: false,
-        className: '',
+        className: '', // Deprecated - use containerClassName and replacerClassName instead.
         containerClassName: '',
         replacerClassName: '',
         showAlpha: false,
@@ -45700,7 +45699,7 @@ var LayerManager = /** @class */ (function (_super) {
             name: component.getName(),
             open: this.isOpen(component),
             selected: status === 'selected',
-            hovered: status === 'hovered',
+            hovered: status === 'hovered', // || this.em.getHovered() === component,
             visible: this.isVisible(component),
             locked: this.isLocked(component),
             components: this.getComponents(component),
@@ -47035,9 +47034,8 @@ var AssetManager = /** @class */ (function (_super) {
      * @private
      */
     function AssetManager(em) {
-        var _this = 
         // @ts-ignore
-        _super.call(this, em, 'AssetManager', new model_Assets([], em), assetEvents, asset_manager_config_config) || this;
+        var _this = _super.call(this, em, 'AssetManager', new model_Assets([], em), assetEvents, asset_manager_config_config) || this;
         _this.storageKey = 'assets';
         _this.Asset = model_Asset;
         _this.Assets = model_Assets;
@@ -47253,7 +47251,7 @@ var AssetManager = /** @class */ (function (_super) {
     };
     AssetManager.prototype.__viewParams = function () {
         return {
-            collection: this.assetsVis,
+            collection: this.assetsVis, // Collection visible in asset manager
             globalCollection: this.all,
             config: this.config,
             module: this,
@@ -47509,7 +47507,6 @@ var traitInputAttr = {
     //   }
     // }
   },
-
   traitManager: {
     empty: 'Select an element before using Trait Manager',
     label: 'Component settings',
@@ -48763,14 +48760,14 @@ var Sorter = /** @class */ (function (_super) {
      * */
     Sorter.prototype.endMove = function () {
         var _this = this;
-        var _a;
+        var _a, _b;
         var src = this.sourceEl;
         var moved = [];
         var docs = this.getDocuments();
         var container = this.getContainerEl();
         var onEndMove = this.onEndMove;
         var onEnd = this.onEnd;
-        var _b = this, target = _b.target, lastPos = _b.lastPos;
+        var _c = this, target = _c.target, lastPos = _c.lastPos;
         var srcModel;
         (0,dom/* off */.S1)(container, 'mousemove dragover', this.onMove);
         (0,dom/* off */.S1)(docs, 'mouseup dragend touchend', this.endMove);
@@ -48846,6 +48843,7 @@ var Sorter = /** @class */ (function (_super) {
             moved.length ? moved.forEach(function (m) { return onEndMove(m, _this, data_1); }) : onEndMove(null, this, Sorter_assign(Sorter_assign({}, data_1), { cancelled: 1 }));
         }
         (0,index_all.isFunction)(onEnd) && onEnd({ sorter: this });
+        (_b = this.em) === null || _b === void 0 ? void 0 : _b.trigger('sorter:end');
     };
     /**
      * Move component to new position
@@ -52725,8 +52723,8 @@ var defActions = {
 };
 var RichTextEditor = /** @class */ (function () {
     function RichTextEditor(em, el, settings) {
-        var _this = this;
         if (settings === void 0) { settings = {}; }
+        var _this = this;
         this.em = em;
         this.settings = settings;
         if (el[RTE_KEY]) {
@@ -58115,9 +58113,8 @@ var SectorsView = /** @class */ (function (_super) {
     SectorsView_extends(SectorsView, _super);
     function SectorsView(o) {
         if (o === void 0) { o = {}; }
-        var _this = 
         // @ts-ignore
-        _super.call(this, o) || this;
+        var _this = _super.call(this, o) || this;
         var module = o.module, config = o.config;
         var coll = _this.collection;
         _this.pfx = (config === null || config === void 0 ? void 0 : config.stylePrefix) || '';

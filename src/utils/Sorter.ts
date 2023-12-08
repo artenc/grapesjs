@@ -1238,6 +1238,8 @@ export default class Sorter extends View {
     }
 
     isFunction(onEnd) && onEnd({ sorter: this });
+
+    this.em?.trigger('sorter:end');
   }
 
   /**
