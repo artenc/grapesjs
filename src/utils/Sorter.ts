@@ -423,6 +423,11 @@ export default class Sorter extends View {
     // Avoid strange effects on dragging
     em?.clearSelection();
     this.toggleSortCursor(true);
+
+    // Trigger events
+    em?.trigger('sorter:start', {
+      sorter: this,
+    });
     em?.trigger('sorter:drag:start', src, srcModel);
   }
 
