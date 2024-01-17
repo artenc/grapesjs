@@ -48089,6 +48089,10 @@ var Sorter = /** @class */ (function (_super) {
         // Avoid strange effects on dragging
         em === null || em === void 0 ? void 0 : em.clearSelection();
         this.toggleSortCursor(true);
+        // Trigger events
+        em === null || em === void 0 ? void 0 : em.trigger('sorter:start', {
+            sorter: this,
+        });
         em === null || em === void 0 ? void 0 : em.trigger('sorter:drag:start', src, srcModel);
     };
     /**
