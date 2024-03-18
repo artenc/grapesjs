@@ -25,7 +25,7 @@
  */
 // @ts-ignore
 import UndoManager from 'backbone-undo';
-import { isArray, isBoolean, isEmpty, unique, times } from 'underscore';
+import { isArray, isBoolean, isEmpty, unique, times, isFunction } from 'underscore';
 import { Module } from '../abstract';
 import EditorModel from '../editor/model/Editor';
 import defaults, { UndoManagerConfig } from './config';
@@ -52,7 +52,17 @@ export default class UndoManagerModule extends Module<UndoManagerConfig & { name
     }
 
     const fromUndo = true;
-    this.um = new UndoManager({ track: true, register: [], ...this.config });
+
+    const instanceConfig = { track: true, register: [], ...this.config };
+
+    let instance = this.config.undoManagerInstance;
+    if (!instance) {
+      instance = new UndoManager(instanceConfig);
+    } else if (isFunction(instance)) {
+      instance = instance(instanceConfig);
+    }
+
+    this.um = instance;
     this.um.changeUndoType('change', {
       condition: (object: any) => {
         const hasUndo = object.get('_undo');
