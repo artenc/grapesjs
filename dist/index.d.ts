@@ -6661,6 +6661,10 @@ export interface UndoManagerConfig {
 	 * @default true
 	 */
 	trackSelection?: boolean;
+	/**
+	 * Use the property to use own instance of undo manager
+	 */
+	undoManagerInstance?: Object | Function;
 }
 export type PluginOptions = Record<string, any>;
 export type Plugin<T extends PluginOptions = {}> = (editor: Editor, config: T) => void;
