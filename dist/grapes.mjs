@@ -35242,37 +35242,37 @@ var ComponentTextView = /** @class */ (function (_super) {
      * @private
      * */
     ComponentTextView.prototype.onActive = function (ev) {
-        var _a, _b;
         return __awaiter(this, void 0, void 0, function () {
-            var _c, rte, em, _d, result, delegate, _e, _f, err_1;
+            var _a, rte, em, _b, result, delegate, _c, _d, err_1;
+            var _e, _f;
             return __generator(this, function (_g) {
                 switch (_g.label) {
                     case 0:
-                        _c = this, rte = _c.rte, em = _c.em;
-                        _d = this.canActivate(), result = _d.result, delegate = _d.delegate;
+                        _a = this, rte = _a.rte, em = _a.em;
+                        _b = this.canActivate(), result = _b.result, delegate = _b.delegate;
                         // We place this before stopPropagation in case of nested
                         // text components will not block the editing (#1394)
                         if (!result) {
                             if (delegate) {
-                                (_a = ev === null || ev === void 0 ? void 0 : ev.stopPropagation) === null || _a === void 0 ? void 0 : _a.call(ev);
+                                (_e = ev === null || ev === void 0 ? void 0 : ev.stopPropagation) === null || _e === void 0 ? void 0 : _e.call(ev);
                                 em.setSelected(delegate);
                                 delegate.trigger('active', ev);
                             }
                             return [2 /*return*/];
                         }
-                        (_b = ev === null || ev === void 0 ? void 0 : ev.stopPropagation) === null || _b === void 0 ? void 0 : _b.call(ev);
-                        _e = this;
+                        (_f = ev === null || ev === void 0 ? void 0 : ev.stopPropagation) === null || _f === void 0 ? void 0 : _f.call(ev);
+                        _c = this;
                         return [4 /*yield*/, this.getContent()];
                     case 1:
-                        _e.lastContent = _g.sent();
+                        _c.lastContent = _g.sent();
                         if (!rte) return [3 /*break*/, 5];
                         _g.label = 2;
                     case 2:
                         _g.trys.push([2, 4, , 5]);
-                        _f = this;
+                        _d = this;
                         return [4 /*yield*/, rte.enable(this, this.activeRte, { event: ev })];
                     case 3:
-                        _f.activeRte = _g.sent();
+                        _d.activeRte = _g.sent();
                         return [3 /*break*/, 5];
                     case 4:
                         err_1 = _g.sent();
@@ -35292,10 +35292,10 @@ var ComponentTextView = /** @class */ (function (_super) {
      * Disable element content editing
      * @private
      * */
-    ComponentTextView.prototype.disableEditing = function (opts) {
-        if (opts === void 0) { opts = {}; }
-        return __awaiter(this, void 0, void 0, function () {
+    ComponentTextView.prototype.disableEditing = function () {
+        return __awaiter(this, arguments, void 0, function (opts) {
             var _a, model, rte, activeRte, em, editable, err_2, _b;
+            if (opts === void 0) { opts = {}; }
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
@@ -35359,10 +35359,10 @@ var ComponentTextView = /** @class */ (function (_super) {
     /**
      * Merge content from the DOM to the model
      */
-    ComponentTextView.prototype.syncContent = function (opts) {
-        if (opts === void 0) { opts = {}; }
-        return __awaiter(this, void 0, void 0, function () {
+    ComponentTextView.prototype.syncContent = function () {
+        return __awaiter(this, arguments, void 0, function (opts) {
             var _a, model, rte, rteEnabled, content, comps, contentOpt;
+            if (opts === void 0) { opts = {}; }
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -40489,9 +40489,9 @@ var LocalStorage_generator = (undefined && undefined.__generator) || function (t
 var LocalStorage = /** @class */ (function () {
     function LocalStorage() {
     }
-    LocalStorage.prototype.store = function (data, opts) {
-        if (opts === void 0) { opts = {}; }
-        return LocalStorage_awaiter(this, void 0, void 0, function () {
+    LocalStorage.prototype.store = function (data_1) {
+        return LocalStorage_awaiter(this, arguments, void 0, function (data, opts) {
+            if (opts === void 0) { opts = {}; }
             return LocalStorage_generator(this, function (_a) {
                 if (this.hasLocal(opts, true)) {
                     localStorage.setItem(opts.key, JSON.stringify(data));
@@ -40500,10 +40500,10 @@ var LocalStorage = /** @class */ (function () {
             });
         });
     };
-    LocalStorage.prototype.load = function (opts) {
-        if (opts === void 0) { opts = {}; }
-        return LocalStorage_awaiter(this, void 0, void 0, function () {
+    LocalStorage.prototype.load = function () {
+        return LocalStorage_awaiter(this, arguments, void 0, function (opts) {
             var result;
+            if (opts === void 0) { opts = {}; }
             return LocalStorage_generator(this, function (_a) {
                 result = {};
                 if (this.hasLocal(opts, true)) {
@@ -40942,9 +40942,9 @@ var RemoteStorage_generator = (undefined && undefined.__generator) || function (
 var RemoteStorage = /** @class */ (function () {
     function RemoteStorage() {
     }
-    RemoteStorage.prototype.store = function (data, opts) {
-        if (opts === void 0) { opts = {}; }
-        return RemoteStorage_awaiter(this, void 0, void 0, function () {
+    RemoteStorage.prototype.store = function (data_1) {
+        return RemoteStorage_awaiter(this, arguments, void 0, function (data, opts) {
+            if (opts === void 0) { opts = {}; }
             return RemoteStorage_generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.request(opts.urlStore, this.__props(opts, data), opts)];
@@ -40953,9 +40953,9 @@ var RemoteStorage = /** @class */ (function () {
             });
         });
     };
-    RemoteStorage.prototype.load = function (opts) {
-        if (opts === void 0) { opts = {}; }
-        return RemoteStorage_awaiter(this, void 0, void 0, function () {
+    RemoteStorage.prototype.load = function () {
+        return RemoteStorage_awaiter(this, arguments, void 0, function (opts) {
+            if (opts === void 0) { opts = {}; }
             return RemoteStorage_generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.request(opts.urlLoad, this.__props(opts), opts)];
@@ -41261,10 +41261,10 @@ var StorageManager = /** @class */ (function (_super) {
      * const data = editor.getProjectData();
      * await storageManager.store(data);
      * */
-    StorageManager.prototype.store = function (data, options) {
-        if (options === void 0) { options = {}; }
-        return storage_manager_awaiter(this, void 0, void 0, function () {
+    StorageManager.prototype.store = function (data_1) {
+        return storage_manager_awaiter(this, arguments, void 0, function (data, options) {
             var st, opts, recovery, recoveryOpts, _a, error_1;
+            if (options === void 0) { options = {}; }
             return storage_manager_generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -41309,10 +41309,10 @@ var StorageManager = /** @class */ (function (_super) {
      * const data = await storageManager.load();
      * editor.loadProjectData(data);
      * */
-    StorageManager.prototype.load = function (options) {
-        if (options === void 0) { options = {}; }
-        return storage_manager_awaiter(this, void 0, void 0, function () {
+    StorageManager.prototype.load = function () {
+        return storage_manager_awaiter(this, arguments, void 0, function (options) {
             var st, opts, recoveryStorage, result, recoveryData, error_2;
+            if (options === void 0) { options = {}; }
             return storage_manager_generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -41366,14 +41366,14 @@ var StorageManager = /** @class */ (function (_super) {
         return recovery && this.getCurrent() === STORAGE_REMOTE && this.get(STORAGE_LOCAL);
     };
     StorageManager.prototype.__exec = function (storage, opts, data) {
-        var _a;
         return storage_manager_awaiter(this, void 0, void 0, function () {
-            var ev, _b, onStore, onLoad, result, editor, response, toStore, _c, _d, _e, _f, error_3;
+            var ev, _a, onStore, onLoad, result, editor, response, toStore, _b, _c, _d, _e, error_3;
+            var _f;
             return storage_manager_generator(this, function (_g) {
                 switch (_g.label) {
                     case 0:
                         ev = data ? 'store' : 'load';
-                        _b = this.getConfig(), onStore = _b.onStore, onLoad = _b.onLoad;
+                        _a = this.getConfig(), onStore = _a.onStore, onLoad = _a.onLoad;
                         this.onStart(ev, data);
                         if (!storage) {
                             return [2 /*return*/, data || {}];
@@ -41381,25 +41381,25 @@ var StorageManager = /** @class */ (function (_super) {
                         _g.label = 1;
                     case 1:
                         _g.trys.push([1, 14, , 15]);
-                        editor = (_a = this.em) === null || _a === void 0 ? void 0 : _a.getEditor();
+                        editor = (_f = this.em) === null || _f === void 0 ? void 0 : _f.getEditor();
                         response = void 0;
                         if (!data) return [3 /*break*/, 7];
-                        _c = onStore;
-                        if (!_c) return [3 /*break*/, 3];
+                        _b = onStore;
+                        if (!_b) return [3 /*break*/, 3];
                         return [4 /*yield*/, onStore(data, editor)];
                     case 2:
-                        _c = (_g.sent());
+                        _b = (_g.sent());
                         _g.label = 3;
                     case 3:
-                        toStore = (_c) || data;
-                        _d = opts.onStore;
-                        if (!_d) return [3 /*break*/, 5];
+                        toStore = (_b) || data;
+                        _c = opts.onStore;
+                        if (!_c) return [3 /*break*/, 5];
                         return [4 /*yield*/, opts.onStore(toStore, editor)];
                     case 4:
-                        _d = (_g.sent());
+                        _c = (_g.sent());
                         _g.label = 5;
                     case 5:
-                        toStore = (_d) || toStore;
+                        toStore = (_c) || toStore;
                         return [4 /*yield*/, storage.store(toStore, opts)];
                     case 6:
                         response = _g.sent();
@@ -41409,22 +41409,22 @@ var StorageManager = /** @class */ (function (_super) {
                     case 8:
                         response = _g.sent();
                         result = this.__clearKeys(response);
-                        _e = opts.onLoad;
-                        if (!_e) return [3 /*break*/, 10];
+                        _d = opts.onLoad;
+                        if (!_d) return [3 /*break*/, 10];
                         return [4 /*yield*/, opts.onLoad(result, editor)];
                     case 9:
-                        _e = (_g.sent());
+                        _d = (_g.sent());
                         _g.label = 10;
                     case 10:
-                        result = (_e) || result;
-                        _f = onLoad;
-                        if (!_f) return [3 /*break*/, 12];
+                        result = (_d) || result;
+                        _e = onLoad;
+                        if (!_e) return [3 /*break*/, 12];
                         return [4 /*yield*/, onLoad(result, editor)];
                     case 11:
-                        _f = (_g.sent());
+                        _e = (_g.sent());
                         _g.label = 12;
                     case 12:
-                        result = (_f) || result;
+                        result = (_e) || result;
                         _g.label = 13;
                     case 13:
                         this.onAfter(ev, result, response);
@@ -52205,6 +52205,7 @@ var Backbone_Undo_default = /*#__PURE__*/__webpack_require__.n(Backbone_Undo);
 var undo_manager_config_config = {
     maximumStackLength: 500,
     trackSelection: true,
+    undoManagerInstance: undefined,
 };
 /* harmony default export */ const undo_manager_config = (undo_manager_config_config);
 
@@ -52284,7 +52285,15 @@ var UndoManagerModule = /** @class */ (function (_super) {
             _this.config.maximumStackLength = 0;
         }
         var fromUndo = true;
-        _this.um = new (Backbone_Undo_default())(undo_manager_assign({ track: true, register: [] }, _this.config));
+        var instanceConfig = undo_manager_assign({ track: true, register: [] }, _this.config);
+        var instance = _this.config.undoManagerInstance;
+        if (!instance) {
+            instance = new (Backbone_Undo_default())(instanceConfig);
+        }
+        else if ((0,index_all.isFunction)(instance)) {
+            instance = instance(instanceConfig);
+        }
+        _this.um = instance;
         _this.um.changeUndoType('change', {
             condition: function (object) {
                 var hasUndo = object.get('_undo');
@@ -53391,10 +53400,10 @@ var RichTextEditorModule = /** @class */ (function (_super) {
      * @param {Object} rte The instance of already defined RTE
      * @private
      * */
-    RichTextEditorModule.prototype.enable = function (view, rte, opts) {
-        if (opts === void 0) { opts = {}; }
-        return rich_text_editor_awaiter(this, void 0, void 0, function () {
+    RichTextEditorModule.prototype.enable = function (view_1, rte_1) {
+        return rich_text_editor_awaiter(this, arguments, void 0, function (view, rte, opts) {
             var _a, customRte, em, el, rteInst;
+            if (opts === void 0) { opts = {}; }
             return rich_text_editor_generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -59921,10 +59930,10 @@ var EditorModel = /** @class */ (function (_super) {
      * Load data from the current storage.
      * @public
      */
-    EditorModel.prototype.load = function (options, loadOptions) {
-        if (loadOptions === void 0) { loadOptions = {}; }
-        return Editor_awaiter(this, void 0, void 0, function () {
+    EditorModel.prototype.load = function (options_1) {
+        return Editor_awaiter(this, arguments, void 0, function (options, loadOptions) {
             var result;
+            if (loadOptions === void 0) { loadOptions = {}; }
             return Editor_generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.Storage.load(options)];
@@ -60880,9 +60889,9 @@ var Editor = /** @class */ (function () {
      * @example
      * const data = await editor.load();
      */
-    Editor.prototype.load = function (options, loadOptions) {
-        if (loadOptions === void 0) { loadOptions = {}; }
-        return editor_awaiter(this, void 0, void 0, function () {
+    Editor.prototype.load = function (options_1) {
+        return editor_awaiter(this, arguments, void 0, function (options, loadOptions) {
+            if (loadOptions === void 0) { loadOptions = {}; }
             return editor_generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.em.load(options, loadOptions)];
