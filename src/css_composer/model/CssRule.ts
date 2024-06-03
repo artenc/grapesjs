@@ -216,10 +216,17 @@ export default class CssRule extends StyleableModel<CssRuleProperties> {
     const { important } = this.attributes;
     const selectors = this.selectorsToString(opts);
     const style = this.styleToString({ important, ...opts });
-    const singleAtRule = this.get('singleAtRule');
 
-    if ((selectors || singleAtRule) && (style || opts.allowEmpty)) {
-      result = singleAtRule ? style : `${selectors}{${style}}`;
+    if (!(style || opts.allowEmpty)) {
+      return '';
+    }
+
+    if (this.get('singleAtRule') || this.get('atRuleType') == 'keyframes') {
+      return style;
+    }
+
+    if (selectors) {
+      result = `${selectors}{${style}}`;
     }
 
     return result;
