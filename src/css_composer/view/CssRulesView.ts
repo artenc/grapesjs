@@ -3,7 +3,6 @@ import { bindAll } from 'underscore';
 import { View } from '../../common';
 import { createEl } from '../../utils/dom';
 import CssRuleView from './CssRuleView';
-import CssGroupRuleView from './CssGroupRuleView';
 import EditorModel from '../../editor/model/Editor';
 import CssRule from '../model/CssRule';
 
@@ -58,29 +57,8 @@ export default class CssRulesView extends View {
     const opts = { model, config };
     let rendered, view;
 
-    // I have to render keyframes of the same name together
-    // Unfortunately at the moment I didn't find the way of appending them
-    // if not staticly, via appendData
-    if (model.get('atRuleType') === 'keyframes') {
-      const atRule = model.getAtRule();
-      let atRuleEl = this.atRules[atRule];
-
-      if (!atRuleEl) {
-        const styleEl = document.createElement('style');
-        atRuleEl = document.createTextNode('');
-        styleEl.appendChild(document.createTextNode(`${atRule}{`));
-        styleEl.appendChild(atRuleEl);
-        styleEl.appendChild(document.createTextNode('}'));
-        this.atRules[atRule] = atRuleEl;
-        rendered = styleEl;
-      }
-
-      view = new CssGroupRuleView(opts);
-      atRuleEl.appendData(view.render().el.textContent);
-    } else {
-      view = new CssRuleView(opts);
-      rendered = view.render().el;
-    }
+    view = new CssRuleView(opts);
+    rendered = view.render().el;
 
     const clsName = this.className!;
     const mediaText = model.get('mediaText');
