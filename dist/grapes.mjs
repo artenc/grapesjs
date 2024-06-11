@@ -26502,41 +26502,6 @@ var CssRuleView = /** @class */ (function (_super) {
 }(common/* View */.G7));
 /* harmony default export */ const view_CssRuleView = (CssRuleView);
 
-;// CONCATENATED MODULE: ./src/css_composer/view/CssGroupRuleView.ts
-var CssGroupRuleView_extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-
-var CssGroupRuleView = /** @class */ (function (_super) {
-    CssGroupRuleView_extends(CssGroupRuleView, _super);
-    function CssGroupRuleView() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    CssGroupRuleView.prototype._createElement = function () {
-        return document.createTextNode('');
-    };
-    CssGroupRuleView.prototype.render = function () {
-        var model = this.model;
-        var important = model.get('important');
-        this.el.textContent = model.getDeclaration({ important: important });
-        return this;
-    };
-    return CssGroupRuleView;
-}(view_CssRuleView));
-/* harmony default export */ const view_CssGroupRuleView = (CssGroupRuleView);
-
 ;// CONCATENATED MODULE: ./src/css_composer/view/CssRulesView.ts
 var CssRulesView_extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
@@ -26553,7 +26518,6 @@ var CssRulesView_extends = (undefined && undefined.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-
 
 
 
@@ -26599,28 +26563,8 @@ var CssRulesView = /** @class */ (function (_super) {
         var config = this.config;
         var opts = { model: model, config: config };
         var rendered, view;
-        // I have to render keyframes of the same name together
-        // Unfortunately at the moment I didn't find the way of appending them
-        // if not staticly, via appendData
-        if (model.get('atRuleType') === 'keyframes') {
-            var atRule = model.getAtRule();
-            var atRuleEl = this.atRules[atRule];
-            if (!atRuleEl) {
-                var styleEl = document.createElement('style');
-                atRuleEl = document.createTextNode('');
-                styleEl.appendChild(document.createTextNode("".concat(atRule, "{")));
-                styleEl.appendChild(atRuleEl);
-                styleEl.appendChild(document.createTextNode('}'));
-                this.atRules[atRule] = atRuleEl;
-                rendered = styleEl;
-            }
-            view = new view_CssGroupRuleView(opts);
-            atRuleEl.appendData(view.render().el.textContent);
-        }
-        else {
-            view = new view_CssRuleView(opts);
-            rendered = view.render().el;
-        }
+        view = new view_CssRuleView(opts);
+        rendered = view.render().el;
         var clsName = this.className;
         var mediaText = model.get('mediaText');
         var defaultBlockId = getBlockId(clsName);
@@ -29585,8 +29529,14 @@ var StyleableModel = /** @class */ (function (_super) {
      */
     StyleableModel.prototype.styleToString = function (opts) {
         if (opts === void 0) { opts = {}; }
+        var style = this.get('style') || {};
+        if ((0,index_all.isString)(style)) {
+            return style;
+        }
+        if ((0,index_all.isArray)(style)) {
+            return style.join(' ');
+        }
         var result = [];
-        var style = this.getStyle(opts);
         var imp = opts.important;
         var _loop_1 = function (prop) {
             var important = (0,index_all.isArray)(imp) ? imp.indexOf(prop) >= 0 : imp;
@@ -37137,9 +37087,14 @@ var CssRule = /** @class */ (function (_super) {
         var important = this.attributes.important;
         var selectors = this.selectorsToString(opts);
         var style = this.styleToString(CssRule_assign({ important: important }, opts));
-        var singleAtRule = this.get('singleAtRule');
-        if ((selectors || singleAtRule) && (style || opts.allowEmpty)) {
-            result = singleAtRule ? style : "".concat(selectors, "{").concat(style, "}");
+        if (!(style || opts.allowEmpty)) {
+            return '';
+        }
+        if (this.get('singleAtRule') || this.get('atRuleType') == 'keyframes') {
+            return style;
+        }
+        if (selectors) {
+            result = "".concat(selectors, "{").concat(style, "}");
         }
         return result;
     };
