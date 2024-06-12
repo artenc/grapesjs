@@ -53,6 +53,8 @@ export interface SorterOptions {
   canvasRelative?: boolean;
   avoidSelectOnEnd?: boolean;
   scale?: number;
+  dropCustom?: Function;
+  updateCustomTextableDropCursor?: Function;
 }
 
 const noop = () => {};
@@ -157,6 +159,9 @@ export default class Sorter extends View {
     this.canvasRelative = !!o.canvasRelative;
     this.selectOnEnd = !o.avoidSelectOnEnd;
     this.scale = o.scale;
+
+    this.dropCustom = o.dropCustom;
+    this.updateCustomTextableDropCursor = o.updateCustomTextableDropCursor;
 
     if (this.em && this.em.on) {
       this.em.on('change:canvasOffset', this.updateOffset);
