@@ -90,6 +90,8 @@ export default class Sorter extends View {
   offTop!: number;
   offLeft!: number;
   dropContent?: DropContent;
+  dropCustom?: Function;
+  updateCustomTextableDropCursor?: Function;
   em?: EditorModel;
   dragHelper?: HTMLElement;
   canvasRelative!: boolean;
@@ -557,7 +559,12 @@ export default class Sorter extends View {
       this.activeTextModel = targetModel;
       plh!.style.display = 'none';
       this.lastPos = pos;
-      this.updateTextViewCursorPosition(ev);
+
+      if (this.updateCustomTextableDropCursor) {
+        this.updateCustomTextableDropCursor(ev);
+      } else {
+        this.updateTextViewCursorPosition(ev);
+      }
     } else {
       this.disableTextable();
       delete this.activeTextModel;
@@ -603,6 +610,10 @@ export default class Sorter extends View {
   }
 
   disableTextable() {
+    if (this.updateCustomTextableDropCursor) {
+      this.updateCustomTextableDropCursor();
+    }
+
     const { activeTextModel } = this;
     // @ts-ignore
     activeTextModel?.getView().disableEditing();
@@ -1254,7 +1265,7 @@ export default class Sorter extends View {
    * @param {Object} pos Object with position coordinates
    * */
   move(dst: HTMLElement, src: HTMLElement | Model, pos: Pos) {
-    const { em, dropContent } = this;
+    const { em, dropContent, dropCustom } = this;
     const srcEl = getElement(src as HTMLElement);
     const warns = [];
     const index = pos.method === 'after' ? pos.indexEl + 1 : pos.indexEl;
@@ -1268,25 +1279,36 @@ export default class Sorter extends View {
       const opts: any = { at: index, action: 'move-component' };
       const isTextable = this.isTextableActive(srcModel, trgModel);
 
-      if (!dropContent) {
-        const srcIndex = srcModel.collection.indexOf(srcModel);
-        const sameCollection = targetCollection === srcModel.collection;
-        const sameIndex = srcIndex === index || srcIndex === index - 1;
-        const canRemove = !sameCollection || !sameIndex || isTextable;
+      if (dropCustom) {
+        created = dropCustom({
+          targetCollection,
+          isTextable,
+        });
+      }
 
-        if (canRemove) {
-          modelToDrop = srcModel.collection.remove(srcModel, {
-            temporary: true,
-          } as any);
-          if (sameCollection && index > srcIndex) {
-            opts.at = index - 1;
+      if (!created) {
+        if (!dropContent) {
+          const srcIndex = srcModel.collection.indexOf(srcModel);
+          const sameCollection = targetCollection === srcModel.collection;
+          const sameIndex = srcIndex === index || srcIndex === index - 1;
+          const canRemove = !sameCollection || !sameIndex || isTextable;
+
+          if (canRemove) {
+            modelToDrop = srcModel.collection.remove(srcModel, {
+              temporary: true,
+            } as any);
+            if (sameCollection && index > srcIndex) {
+              opts.at = index - 1;
+            }
           }
+        } else {
+          // @ts-ignore
+          modelToDrop = isFunction(dropContent) ? dropContent() : dropContent;
+          opts.avoidUpdateStyle = true;
+          opts.action = 'add-component';
         }
-      } else {
-        // @ts-ignore
-        modelToDrop = isFunction(dropContent) ? dropContent() : dropContent;
-        opts.avoidUpdateStyle = true;
-        opts.action = 'add-component';
+      } else if (created === true) {
+        created = undefined;
       }
 
       if (modelToDrop) {

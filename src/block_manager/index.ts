@@ -188,7 +188,7 @@ export default class BlockManager extends ItemManagerModule<BlockManagerConfig, 
       }
     }
 
-    em.set({ dragResult: null, dragContent: null });
+    em.set({ dragResult: null, dragContent: null, dragOptions: null });
 
     if (block) {
       [em, blocks].map(i => i.trigger(events.dragEnd, cmp, block));
