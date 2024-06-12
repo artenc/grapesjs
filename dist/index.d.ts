@@ -10699,6 +10699,8 @@ declare class Sorter extends View {
 	offTop: number;
 	offLeft: number;
 	dropContent?: DropContent;
+	dropCustom?: Function;
+	updateCustomTextableDropCursor?: Function;
 	em?: EditorModel;
 	dragHelper?: HTMLElement;
 	canvasRelative: boolean;
