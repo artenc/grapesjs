@@ -10672,6 +10672,8 @@ export interface SorterOptions {
 	canvasRelative?: boolean;
 	avoidSelectOnEnd?: boolean;
 	scale?: number;
+	dropCustom?: Function;
+	updateCustomTextableDropCursor?: Function;
 }
 declare class Sorter extends View {
 	opt: SorterOptions;
