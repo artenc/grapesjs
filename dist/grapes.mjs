@@ -26720,6 +26720,7 @@ var Droppable = /** @class */ (function () {
         if (!dragContentOrigin && !canvas.getConfig().allowExternalDrop) {
             return;
         }
+        var dragOptions = em.get('dragOptions') || {};
         this.updateCounter(1, ev);
         if (this.over)
             return;
@@ -26767,7 +26768,7 @@ var Droppable = /** @class */ (function () {
         else {
             var sorter_1 = new utils.Sorter(Droppable_assign({ 
                 // @ts-ignore
-                em: em, wmargin: 1, nested: 1, canvasRelative: 1, direction: 'a', container: this.el, placer: canvas.getPlacerEl(), containerSel: '*', itemSel: '*', pfx: 'gjs-', onEndMove: function (model) { return _this.handleDragEnd(model, dt); }, document: this.el.ownerDocument }, (this.sortOpts || {})));
+                em: em, wmargin: 1, nested: 1, canvasRelative: 1, direction: 'a', container: this.el, placer: canvas.getPlacerEl(), containerSel: '*', itemSel: '*', pfx: 'gjs-', dropCustom: dragOptions.dropCustom, updateCustomTextableDropCursor: dragOptions.updateCustomTextableDropCursor, onEndMove: function (model) { return _this.handleDragEnd(model, dt); }, document: this.el.ownerDocument }, (this.sortOpts || {})));
             sorter_1.setDropContent(content);
             sorter_1.startSort();
             this.sorter = sorter_1;
@@ -38636,7 +38637,7 @@ var BlockManager = /** @class */ (function (_super) {
                 first.onAll(function (cmp) { return cmp.resetId(); });
             }
         }
-        em.set({ dragResult: null, dragContent: null });
+        em.set({ dragResult: null, dragContent: null, dragOptions: null });
         if (block) {
             [em, blocks].map(function (i) { return i.trigger(events.dragEnd, cmp, block); });
         }
@@ -47803,6 +47804,8 @@ var Sorter = /** @class */ (function (_super) {
         this.canvasRelative = !!o.canvasRelative;
         this.selectOnEnd = !o.avoidSelectOnEnd;
         this.scale = o.scale;
+        this.dropCustom = o.dropCustom;
+        this.updateCustomTextableDropCursor = o.updateCustomTextableDropCursor;
         if (this.em && this.em.on) {
             this.em.on('change:canvasOffset', this.updateOffset);
             this.updateOffset();
@@ -48165,7 +48168,12 @@ var Sorter = /** @class */ (function (_super) {
             this.activeTextModel = targetModel;
             plh.style.display = 'none';
             this.lastPos = pos;
-            this.updateTextViewCursorPosition(ev);
+            if (this.updateCustomTextableDropCursor) {
+                this.updateCustomTextableDropCursor(ev);
+            }
+            else {
+                this.updateTextViewCursorPosition(ev);
+            }
         }
         else {
             this.disableTextable();
@@ -48209,6 +48217,9 @@ var Sorter = /** @class */ (function (_super) {
         return ((_a = src === null || src === void 0 ? void 0 : src.get) === null || _a === void 0 ? void 0 : _a.call(src, 'textable')) && (trg === null || trg === void 0 ? void 0 : trg.isInstanceOf('text'));
     };
     Sorter.prototype.disableTextable = function () {
+        if (this.updateCustomTextableDropCursor) {
+            this.updateCustomTextableDropCursor();
+        }
         var activeTextModel = this.activeTextModel;
         // @ts-ignore
         activeTextModel === null || activeTextModel === void 0 ? void 0 : activeTextModel.getView().disableEditing();
@@ -48308,7 +48319,9 @@ var Sorter = /** @class */ (function (_super) {
         // Check if the source is draggable in target
         var draggable = srcModel.get('draggable');
         if ((0,index_all.isFunction)(draggable)) {
-            var res = draggable(srcModel, trgModel);
+            var res = draggable(srcModel, trgModel, {
+                isTextable: this.isTextableActive(srcModel, trgModel),
+            });
             result.dragInfo = res;
             result.draggable = res;
             draggable = res;
@@ -48811,7 +48824,7 @@ var Sorter = /** @class */ (function (_super) {
      * @param {Object} pos Object with position coordinates
      * */
     Sorter.prototype.move = function (dst, src, pos) {
-        var _a = this, em = _a.em, dropContent = _a.dropContent;
+        var _a = this, em = _a.em, dropContent = _a.dropContent, dropCustom = _a.dropCustom;
         var srcEl = (0,mixins.getElement)(src);
         var warns = [];
         var index = pos.method === 'after' ? pos.indexEl + 1 : pos.indexEl;
@@ -48823,25 +48836,36 @@ var Sorter = /** @class */ (function (_super) {
         if (targetCollection && droppable && draggable) {
             var opts = { at: index, action: 'move-component' };
             var isTextable = this.isTextableActive(srcModel, trgModel);
-            if (!dropContent) {
-                var srcIndex = srcModel.collection.indexOf(srcModel);
-                var sameCollection = targetCollection === srcModel.collection;
-                var sameIndex = srcIndex === index || srcIndex === index - 1;
-                var canRemove = !sameCollection || !sameIndex || isTextable;
-                if (canRemove) {
-                    modelToDrop = srcModel.collection.remove(srcModel, {
-                        temporary: true,
-                    });
-                    if (sameCollection && index > srcIndex) {
-                        opts.at = index - 1;
+            if (dropCustom) {
+                created = dropCustom({
+                    targetCollection: targetCollection,
+                    isTextable: isTextable,
+                });
+            }
+            if (!created) {
+                if (!dropContent) {
+                    var srcIndex = srcModel.collection.indexOf(srcModel);
+                    var sameCollection = targetCollection === srcModel.collection;
+                    var sameIndex = srcIndex === index || srcIndex === index - 1;
+                    var canRemove = !sameCollection || !sameIndex || isTextable;
+                    if (canRemove) {
+                        modelToDrop = srcModel.collection.remove(srcModel, {
+                            temporary: true,
+                        });
+                        if (sameCollection && index > srcIndex) {
+                            opts.at = index - 1;
+                        }
                     }
                 }
+                else {
+                    // @ts-ignore
+                    modelToDrop = (0,index_all.isFunction)(dropContent) ? dropContent() : dropContent;
+                    opts.avoidUpdateStyle = true;
+                    opts.action = 'add-component';
+                }
             }
-            else {
-                // @ts-ignore
-                modelToDrop = (0,index_all.isFunction)(dropContent) ? dropContent() : dropContent;
-                opts.avoidUpdateStyle = true;
-                opts.action = 'add-component';
+            else if (created === true) {
+                created = undefined;
             }
             if (modelToDrop) {
                 if (isTextable) {
