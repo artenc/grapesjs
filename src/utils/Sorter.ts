@@ -719,7 +719,9 @@ export default class Sorter extends View {
     // Check if the source is draggable in target
     let draggable = srcModel.get('draggable');
     if (isFunction(draggable)) {
-      const res = draggable(srcModel, trgModel);
+      const res = draggable(srcModel, trgModel, {
+        isTextable: this.isTextableActive(srcModel, trgModel),
+      });
       result.dragInfo = res;
       result.draggable = res;
       draggable = res;
