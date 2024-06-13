@@ -112,6 +112,8 @@ export default class Droppable {
       return;
     }
 
+    const dragOptions = em.get('dragOptions') || {};
+
     this.updateCounter(1, ev);
     if (this.over) return;
     this.over = true;
@@ -168,6 +170,8 @@ export default class Droppable {
         containerSel: '*',
         itemSel: '*',
         pfx: 'gjs-',
+        dropCustom: dragOptions.dropCustom,
+        updateCustomTextableDropCursor: dragOptions.updateCustomTextableDropCursor,
         onEndMove: (model: any) => this.handleDragEnd(model, dt),
         document: this.el.ownerDocument,
         ...(this.sortOpts || {}),
