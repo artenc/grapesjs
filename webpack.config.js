@@ -31,5 +31,8 @@ module.exports = ({ config, pkg, webpack }) => ({
   plugins: [
     new webpack.DefinePlugin({ __GJS_VERSION__: `'${pkg.version}'` }),
     ...config.plugins,
-  ]
+  ],
+  optimization: {
+    minimize: false,
+  },
 });

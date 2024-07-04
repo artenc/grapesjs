@@ -3447,7 +3447,7 @@ declare class ComponentFrame extends Component {
 		attributes: {
 			frameborder: string;
 		};
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
 	};
 	static isComponent(el: HTMLElement): boolean;
 }
@@ -3466,7 +3466,7 @@ declare class ComponentImage extends Component {
 		src: string;
 		fallback: string;
 		file: string;
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
 	};
 	initialize(props: any, opts: any): void;
 	initToolbar(): void;
@@ -3511,8 +3511,8 @@ declare class ComponentText extends Component {
 		type: string;
 		droppable: boolean;
 		editable: boolean;
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
-		traits?: (string | Partial<TraitProperties>)[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
+		traits?: (Partial<TraitProperties> | string)[];
 	};
 	initialize(props: any, opts: any): void;
 	__checkInnerChilds(): void;
@@ -3524,7 +3524,7 @@ declare class ComponentLink extends ComponentText {
 		traits: string[];
 		droppable: boolean;
 		editable: boolean;
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
 	};
 	static isComponent(el: HTMLElement, opts?: any): any;
 }
@@ -3582,7 +3582,7 @@ declare class ComponentMap extends ComponentImage {
 		};
 		fallback: string;
 		file: string;
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
 	};
 	initialize(props: any, opts: any): void;
 	updateSrc(): void;
@@ -3609,8 +3609,8 @@ declare class ComponentScript extends Component {
 		droppable: boolean;
 		draggable: boolean;
 		layerable: boolean;
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
-		traits?: (string | Partial<TraitProperties>)[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
+		traits?: (Partial<TraitProperties> | string)[];
 	};
 	static isComponent(el: HTMLImageElement): any;
 }
@@ -3622,8 +3622,8 @@ declare class ComponentSvg extends Component {
 		resizable: {
 			ratioDefault: boolean;
 		};
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
-		traits?: (string | Partial<TraitProperties>)[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
+		traits?: (Partial<TraitProperties> | string)[];
 	};
 	getName(): any;
 	static isComponent(el: HTMLElement): boolean;
@@ -3639,8 +3639,8 @@ declare class ComponentSvgIn extends ComponentSvg {
 		resizable: {
 			ratioDefault: boolean;
 		};
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
-		traits?: (string | Partial<TraitProperties>)[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
+		traits?: (Partial<TraitProperties> | string)[];
 	};
 	static isComponent(el: any, opts?: any): boolean;
 }
@@ -3649,8 +3649,8 @@ declare class ComponentTable extends Component {
 		type: string;
 		tagName: string;
 		droppable: string[];
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
-		traits?: (string | Partial<TraitProperties>)[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
+		traits?: (Partial<TraitProperties> | string)[];
 	};
 	initialize(props: any, opts: any): void;
 	static isComponent(el: HTMLElement): boolean;
@@ -3660,8 +3660,8 @@ declare class ComponentTableCell extends Component {
 		type: string;
 		tagName: string;
 		draggable: string[];
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
-		traits?: (string | Partial<TraitProperties>)[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
+		traits?: (Partial<TraitProperties> | string)[];
 	};
 	static isComponent(el: HTMLElement): boolean;
 }
@@ -3670,8 +3670,8 @@ declare class ComponentTableRow extends Component {
 		tagName: string;
 		draggable: string[];
 		droppable: string[];
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
-		traits?: (string | Partial<TraitProperties>)[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
+		traits?: (Partial<TraitProperties> | string)[];
 	};
 	static isComponent(el: HTMLElement): boolean;
 }
@@ -3682,8 +3682,8 @@ declare class ComponentTextNode extends Component {
 		layerable: boolean;
 		selectable: boolean;
 		editable: boolean;
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
-		traits?: (string | Partial<TraitProperties>)[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
+		traits?: (Partial<TraitProperties> | string)[];
 	};
 	toHTML(): string;
 	__escapeContent(content: string): string;
@@ -3725,7 +3725,7 @@ declare class ComponentVideo extends ComponentImage {
 		src: string;
 		fallback: string;
 		file: string;
-		components?: ComponentDefinitionDefined | ComponentDefinitionDefined[] | undefined;
+		components?: ComponentDefinitionDefined[] | ComponentDefinitionDefined;
 	};
 	initialize(props: any, opts: any): void;
 	updatePropsFromAttr(): void;
@@ -6754,7 +6754,7 @@ export declare class Sector extends Model<SectorProperties> {
 	constructor(prp: SectorProperties, opts?: {
 		em?: EditorModel;
 	});
-	get properties(): Collection<Property<PropertyProps>>;
+	get properties(): Collection<Property>;
 	/**
 	 * Get sector id.
 	 * @returns {String}
@@ -9450,7 +9450,7 @@ declare class ParserModule extends Module<ParserConfig & {
 	 */
 	parseHtml(input: string, options?: HTMLParserOptions): {
 		html: ComponentDefinitionDefined | ComponentDefinitionDefined[];
-		css?: CssRuleJSON[] | undefined;
+		css?: CssRuleJSON[];
 	};
 	/**
 	 * Parse CSS string and return an array of valid definition objects for CSSRules
@@ -9630,7 +9630,7 @@ declare class TraitsView extends DomainViews {
 	em: EditorModel;
 	pfx: string;
 	ppfx: string;
-	constructor(o: any, itemsView: any);
+	constructor(o: any | undefined, itemsView: any);
 	/**
 	 * Update view collection
 	 * @private
@@ -10330,7 +10330,7 @@ declare class AssetManager extends ItemManagerModule<AssetManagerConfig, Assets>
 		collection: Assets;
 		globalCollection: Assets;
 		config: AssetManagerConfig & {
-			pStylePrefix?: string | undefined;
+			pStylePrefix?: string;
 		};
 		module: AssetManager;
 		fu: any;
@@ -10959,8 +10959,8 @@ declare class UtilsModule extends Module {
 			[x: string]: any;
 		};
 		isComponent: (obj: any) => obj is Component;
-		getComponentView: (el?: Node | undefined) => ComponentView | undefined;
-		getComponentModel: (el?: Node | undefined) => Component | undefined;
+		getComponentView: (el?: Node) => ComponentView | undefined;
+		getComponentModel: (el?: Node) => Component | undefined;
 		buildBase64UrlFromSvg: (svg: string) => string;
 		hasDnd: (em: EditorModel) => boolean;
 		upFirst: (value: string) => string;
@@ -10972,11 +10972,11 @@ declare class UtilsModule extends Module {
 		normalizeFloat: (value: any, step?: number, valueDef?: number) => any;
 		getUnitFromValue: (value: any) => any;
 		capitalize: (str?: string) => string;
-		getViewEl: <T extends unknown>(el?: Node | undefined) => T | undefined;
+		getViewEl: <T extends unknown>(el?: Node) => T | undefined;
 		setViewEl: (el: any, view: any) => void;
 		appendStyles: (styles: {}, opts?: {
-			unique?: boolean | undefined;
-			prepand?: boolean | undefined;
+			unique?: boolean;
+			prepand?: boolean;
 		}) => void;
 		isObject: (val: any) => val is ObjectAny;
 		isEmptyObj: (val: ObjectAny) => boolean;
@@ -12030,7 +12030,7 @@ declare abstract class Module<T extends ModuleConfig = ModuleConfig> implements 
 	constructor(em: EditorModel, moduleName: string, defaults?: T);
 	get em(): EditorModel;
 	get config(): T & {
-		pStylePrefix?: string | undefined;
+		pStylePrefix?: string;
 	};
 	abstract destroy(): void;
 	render(opts?: any): HTMLElement | JQuery<HTMLElement> | void;
@@ -12066,7 +12066,7 @@ declare abstract class ItemManagerModule<TConf extends ModuleConfig = ModuleConf
 		reset?: boolean;
 	}): any;
 	clear(opts?: {}): this;
-	getAll(): any;
+	getAll(): TCollection | any;
 	getAllMap(): {
 		[key: string]: TCollection extends Collection<infer C> ? C : unknown;
 	};
@@ -12564,16 +12564,12 @@ export declare class PropertyRadio extends PropertySelect {
 export declare class PropertySlider extends PropertyNumber {
 	defaults(): any;
 }
-export declare const usePlugin: <P extends string | Plugin<any>>(plugin: P, opts?: (P extends Plugin<infer C extends {
-	[x: string]: any;
-}> ? C : {}) | undefined) => (editor: Editor) => void;
+export declare const usePlugin: <P extends Plugin<any> | string>(plugin: P, opts?: P extends Plugin<infer C> ? C : {}) => (editor: Editor) => void;
 export declare const grapesjs: {
 	$: any;
 	editors: Editor[];
 	plugins: PluginManager;
-	usePlugin: <P extends string | Plugin<any>>(plugin: P, opts?: (P extends Plugin<infer C extends {
-		[x: string]: any;
-	}> ? C : {}) | undefined) => (editor: Editor) => void;
+	usePlugin: <P extends Plugin<any> | string>(plugin: P, opts?: P extends Plugin<infer C> ? C : {}) => (editor: Editor) => void;
 	version: any;
 	/**
 	 * Initialize the editor with passed options
