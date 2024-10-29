@@ -1289,6 +1289,8 @@ export default class Sorter extends View {
       if (dropCustom) {
         created = dropCustom({
           targetCollection,
+          trgModel,
+          srcModel,
           isTextable,
         });
       }
