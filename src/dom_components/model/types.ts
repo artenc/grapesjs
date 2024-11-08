@@ -2,7 +2,7 @@ import Frame from '../../canvas/model/Frame';
 import { Nullable } from '../../common';
 import EditorModel from '../../editor/model/Editor';
 import Selectors from '../../selector_manager/model/Selectors';
-import { TraitProperties } from '../../trait_manager/model/Trait';
+import { TraitProperties } from '../../trait_manager/types';
 import Traits from '../../trait_manager/model/Traits';
 import { ResizerOptions } from '../../utils/Resizer';
 import { DomComponentsConfig } from '../config/config';
@@ -18,7 +18,7 @@ export type DraggableDroppableFn = (source: Component, target: Component, index?
 export interface ComponentStackItem {
   id: string;
   model: typeof Component;
-  view: typeof ComponentView;
+  view: typeof ComponentView<any>;
 }
 
 /**
@@ -132,7 +132,7 @@ export interface ComponentProperties {
    */
   copyable?: boolean;
   /**
-   * Indicates if it's possible to resize the component. It's also possible to pass an object as [options for the Resizer](https://github.com/GrapesJS/grapesjs/blob/master/src/utils/Resizer.js). Default: `false`
+   * Indicates if it's possible to resize the component. It's also possible to pass an object as [options for the Resizer](https://github.com/GrapesJS/grapesjs/blob/master/src/utils/Resizer.ts). Default: `false`
    */
   resizable?: boolean | ResizerOptions;
   /**

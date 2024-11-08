@@ -3,9 +3,8 @@ import { ObjectAny } from '../../common';
 import ComponentImage from '../model/ComponentImage';
 import ComponentView from './ComponentView';
 
-export default class ComponentImageView extends ComponentView {
+export default class ComponentImageView<TComp extends ComponentImage = ComponentImage> extends ComponentView<TComp> {
   classEmpty!: string;
-  model!: ComponentImage;
   el!: HTMLImageElement;
 
   tagName() {
@@ -104,7 +103,7 @@ export default class ComponentImageView extends ComponentView {
 
   onLoad() {
     // Used to update component tools box (eg. toolbar, resizer) once the image is loaded
-    this.em.trigger('change:canvasOffset');
+    this.em.Canvas.refresh({ all: true });
   }
 
   noDrag(ev: Event) {

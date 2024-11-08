@@ -7,7 +7,7 @@ import { DeviceManagerConfig } from '../../device_manager/config/config';
 import { I18nConfig } from '../../i18n/config';
 import { ModalConfig } from '../../modal_dialog/config/config';
 import { LayerManagerConfig } from '../../navigator/config/config';
-import { PageManagerConfig } from '../../pages';
+import { PageManagerConfig } from '../../pages/types';
 import { PanelsConfig } from '../../panels/config/config';
 import { ParserConfig } from '../../parser/config/config';
 import { RichTextEditorConfig } from '../../rich_text_editor/config/config';
@@ -22,6 +22,7 @@ import { DomComponentsConfig } from '../../dom_components/config/config';
 import { HTMLGeneratorBuildOptions } from '../../code_manager/model/HtmlGenerator';
 import { CssGeneratorBuildOptions } from '../../code_manager/model/CssGenerator';
 import { ObjectAny } from '../../common';
+import { ColorPickerOptions } from '../../utils/ColorPicker';
 
 export interface EditorConfig {
   /**
@@ -415,10 +416,11 @@ export interface EditorConfig {
    */
   customUI?: boolean;
   el?: HTMLElement;
+
   /**
    * Color picker options.
    */
-  colorPicker?: ObjectAny;
+  colorPicker?: ColorPickerOptions;
   pStylePrefix?: string;
 }
 

@@ -159,12 +159,13 @@ export default class Sorter extends View {
     this.canvasRelative = !!o.canvasRelative;
     this.selectOnEnd = !o.avoidSelectOnEnd;
     this.scale = o.scale;
+    const { em } = this;
 
     this.dropCustom = o.dropCustom;
     this.updateCustomTextableDropCursor = o.updateCustomTextableDropCursor;
 
-    if (this.em && this.em.on) {
-      this.em.on('change:canvasOffset', this.updateOffset);
+    if (em?.on) {
+      em.on(em.Canvas.events.refresh, this.updateOffset);
       this.updateOffset();
     }
   }
@@ -1120,9 +1121,13 @@ export default class Sorter extends View {
         const offset = trgDim.offsets || {};
         const pT = offset.paddingTop || margI;
         const pL = offset.paddingLeft || margI;
-        t = trgDim.top + pT;
-        l = trgDim.left + pL;
-        w = parseInt(`${trgDim.width}`) - pL * 2 + un;
+        const bT = offset.borderTopWidth || 0;
+        const bL = offset.borderLeftWidth || 0;
+        const bR = offset.borderRightWidth || 0;
+        const bWidth = bL + bR;
+        t = trgDim.top + pT + bT;
+        l = trgDim.left + pL + bL;
+        w = parseInt(`${trgDim.width}`) - pL * 2 - bWidth + un;
         h = 'auto';
       }
     }

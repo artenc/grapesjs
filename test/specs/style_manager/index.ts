@@ -24,7 +24,7 @@ describe('StyleManager', () => {
       dv = em.Devices;
       sm = em.Selectors;
       obj = em.Styles;
-      em.get('PageManager').onLoad();
+      em.Pages.onLoad();
     });
 
     afterEach(() => {
@@ -73,7 +73,7 @@ describe('StyleManager', () => {
     });
 
     test('Add property to inexistent sector', () => {
-      expect(obj.addProperty('test', { property: 'test' })).toEqual(null);
+      expect(obj.addProperty('test', { property: 'test' })).toEqual(undefined);
     });
 
     test('Add property', () => {
@@ -213,11 +213,15 @@ describe('StyleManager', () => {
 
       test('Mixed classes', () => {
         const cmp = domc.addComponent('<div class="cls1 cls2"></div>');
-        const [rule1, rule2] = cssc.addRules(`
+        const [a, b, rule1, rule2] = cssc.addRules(`
+          h1 { color: white; }
+          h1 .test { color: black; }
           .cls1 { color: red; }
           .cls1.cls2 { color: blue; }
           .cls2 { color: green; }
           .cls1.cls3 { color: green; }
+          h2 { color: white; }
+          h2 .test { color: black; }
         `);
         em.setSelected(cmp);
         obj.__upSel();
