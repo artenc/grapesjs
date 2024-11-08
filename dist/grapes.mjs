@@ -48214,7 +48214,7 @@ var Sorter = /** @class */ (function (_super) {
     };
     Sorter.prototype.isTextableActive = function (src, trg) {
         var _a;
-        return ((_a = src === null || src === void 0 ? void 0 : src.get) === null || _a === void 0 ? void 0 : _a.call(src, 'textable')) && (trg === null || trg === void 0 ? void 0 : trg.isInstanceOf('text'));
+        return ((_a = src === null || src === void 0 ? void 0 : src.get) === null || _a === void 0 ? void 0 : _a.call(src, 'textable')) && ((trg === null || trg === void 0 ? void 0 : trg.isInstanceOf('text')) || (trg === null || trg === void 0 ? void 0 : trg.get('textableDroppable')));
     };
     Sorter.prototype.disableTextable = function () {
         if (this.updateCustomTextableDropCursor) {
@@ -48839,6 +48839,8 @@ var Sorter = /** @class */ (function (_super) {
             if (dropCustom) {
                 created = dropCustom({
                     targetCollection: targetCollection,
+                    trgModel: trgModel,
+                    srcModel: srcModel,
                     isTextable: isTextable,
                 });
             }
