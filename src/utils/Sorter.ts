@@ -611,7 +611,7 @@ export default class Sorter extends View {
   }
 
   isTextableActive(src: any, trg: any) {
-    return src?.get?.('textable') && trg?.isInstanceOf('text');
+    return src?.get?.('textable') && (trg?.isInstanceOf('text') || trg?.get('textableDroppable'));
   }
 
   disableTextable() {
@@ -1289,6 +1289,8 @@ export default class Sorter extends View {
       if (dropCustom) {
         created = dropCustom({
           targetCollection,
+          trgModel,
+          srcModel,
           isTextable,
         });
       }
