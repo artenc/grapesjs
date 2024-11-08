@@ -552,33 +552,33 @@ export default class StyleManager extends ItemManagerModule<
       const useClasses = !smConf.componentFirst || options.useClasses;
       const addOpts = { noCount: 1 };
       const opts = { state, addOpts };
-      let rule;
 
-      // I stop undo manager here as after adding the CSSRule (generally after
+      // Skipping undo manager here as after adding the CSSRule (generally after
       // selecting the component) and calling undo() it will remove the rule from
       // the collection, therefore updating it in style manager will not affect it
       // #268
-      um.stop();
+      um.skip(() => {
+        let rule;
 
-      if (hasClasses && useClasses) {
-        const deviceW = em.getCurrentMedia();
-        rule = cssC.get(valid, state, deviceW);
+        if (hasClasses && useClasses) {
+          const deviceW = em.getCurrentMedia();
+          rule = cssC.get(valid, state, deviceW);
 
-        if (!rule && !skipAdd) {
-          rule = cssC.add(valid, state, deviceW, {}, addOpts);
+          if (!rule && !skipAdd) {
+            rule = cssC.add(valid, state, deviceW, {}, addOpts);
+          }
+        } else if (config.avoidInlineStyle) {
+          const id = model.getId();
+          rule = cssC.getIdRule(id, opts);
+          !rule && !skipAdd && (rule = cssC.setIdRule(id, {}, opts));
+          if (model.is('wrapper')) {
+            // @ts-ignore
+            rule!.set('wrapper', 1, addOpts);
+          }
         }
-      } else if (config.avoidInlineStyle) {
-        const id = model.getId();
-        rule = cssC.getIdRule(id, opts);
-        !rule && !skipAdd && (rule = cssC.setIdRule(id, {}, opts));
-        if (model.is('wrapper')) {
-          // @ts-ignore
-          rule!.set('wrapper', 1, addOpts);
-        }
-      }
 
-      rule && (model = rule);
-      um.start();
+        rule && (model = rule);
+      });
     }
 
     return model;
@@ -594,19 +594,26 @@ export default class StyleManager extends ItemManagerModule<
       const cssGen = em.CodeManager.getGenerator('css');
       // @ts-ignore
       const cmp = target.toHTML ? target : target.getComponent();
-      const optsSel = { combination: true, array: true };
-      let cmpRules = [];
-      let otherRules = [];
-      let rules = [];
+      const optsSel = { array: true } as const;
+      let cmpRules: CssRule[] = [];
+      let otherRules: CssRule[] = [];
+      let rules: CssRule[] = [];
+
+      const rulesBySelectors = (values: string[]) => {
+        return cssC.getRules().filter(rule => {
+          const rSels = rule.getSelectors().map(s => s.getFullName());
+          return rSels.every(rSel => values.indexOf(rSel) >= 0);
+        });
+      };
 
       // Componente related rule
       if (cmp) {
         cmpRules = cssC.getRules(`#${cmp.getId()}`);
-        otherRules = sel ? cssC.getRules(sel.getSelectors().getFullName(optsSel) as string) : [];
+        otherRules = sel ? rulesBySelectors(sel.getSelectors().getFullName(optsSel)) : [];
         rules = otherRules.concat(cmpRules);
       } else {
         cmpRules = sel ? cssC.getRules(`#${sel.getId()}`) : [];
-        otherRules = cssC.getRules(target.getSelectors().getFullName(optsSel) as string);
+        otherRules = rulesBySelectors(target.getSelectors().getFullName(optsSel));
         rules = cmpRules.concat(otherRules);
       }
 
@@ -725,21 +732,20 @@ export default class StyleManager extends ItemManagerModule<
 
   __emitCmpStyleUpdate(style: StyleProps, opts: { components?: Component | Component[] } = {}) {
     const { em } = this;
-    const event = 'component:styleUpdate';
 
     // Ignore partial updates
     if (!style.__p) {
+      const allSel = this.getSelectedAll();
       const cmp = opts.components || em.getSelectedAll();
       const cmps = Array.isArray(cmp) ? cmp : [cmp];
-      const newStyle = { ...style };
-      delete newStyle.__p;
-      const styleKeys = Object.keys(newStyle);
-      const optsToPass = { style: newStyle };
+      const newStyles = { ...style };
+      delete newStyles.__p;
 
-      cmps.forEach(component => {
-        em.trigger(event, component, optsToPass);
-        styleKeys.forEach(key => em.trigger(`${event}:${key}`, component, optsToPass));
-      });
+      cmps.forEach(
+        cmp =>
+          // if cmp is part of selected, the event should already been triggered
+          !allSel.includes(cmp as any) && cmp.__onStyleChange(newStyles)
+      );
     }
   }
 

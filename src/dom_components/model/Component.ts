@@ -32,7 +32,7 @@ import {
 import Frame from '../../canvas/model/Frame';
 import { DomComponentsConfig } from '../config/config';
 import ComponentView from '../view/ComponentView';
-import { AddOptions, ExtractMethods, ObjectAny, ObjectStrings, SetOptions } from '../../common';
+import { AddOptions, ExtractMethods, ObjectAny, PrevToNewIdMap, SetOptions } from '../../common';
 import CssRule, { CssRuleJSON } from '../../css_composer/model/CssRule';
 import Trait, { TraitProperties } from '../../trait_manager/model/Trait';
 import { ToolbarButtonProps } from './ToolbarButton';
@@ -110,6 +110,7 @@ export const keyUpdateInside = `${keyUpdate}-inside`;
  * Eg. `toolbar: [ { attributes: {class: 'fa fa-arrows'}, command: 'tlb-move' }, ... ]`.
  * By default, when `toolbar` property is falsy the editor will add automatically commands `core:component-exit` (select parent component, added if there is one), `tlb-move` (added if `draggable`) , `tlb-clone` (added if `copyable`), `tlb-delete` (added if `removable`).
  * @property {Collection<Component>} [components=null] Children components. Default: `null`
+ * @property {Object} [delegate=null] Delegate commands to other components. Available commands `remove` | `move` | `copy` | `select`. eg. `{ remove: (cmp) => cmp.closestType('other-type') }`
  *
  * @module docsjs.Component
  */
@@ -154,6 +155,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
       propagate: '',
       dmode: '',
       toolbar: null,
+      delegate: null,
       [keySymbol]: 0,
       [keySymbols]: 0,
       [keySymbolOvrd]: 0,
@@ -180,6 +182,10 @@ export default class Component extends StyleableModel<ComponentProperties> {
 
   get resizable() {
     return this.get('resizable')!;
+  }
+
+  get delegate() {
+    return this.get('delegate');
   }
 
   /**
@@ -316,6 +322,18 @@ export default class Component extends StyleableModel<ComponentProperties> {
       this.__changesUp(opts);
       this.__propSelfToParent({ component: this, changed, options: opts });
     }
+  }
+
+  __onStyleChange(newStyles: StyleProps) {
+    const { em } = this;
+    if (!em) return;
+
+    const event = 'component:styleUpdate';
+    const styleKeys = keys(newStyles);
+    const pros = { style: newStyles };
+
+    em.trigger(event, this, pros);
+    styleKeys.forEach(key => em.trigger(`${event}:${key}`, this, pros));
   }
 
   __changesUp(opts: any) {
@@ -491,16 +509,18 @@ export default class Component extends StyleableModel<ComponentProperties> {
   /**
    * Replace a component with another one
    * @param {String|Component} el Component or HTML string
-   * @return {Component|Array<Component>} New added component/s
+   * @param {Object} [opts={}] Options for the append action
+   * @returns {Array<Component>} New replaced components
    * @example
-   * component.replaceWith('<div>Some new content</div>');
-   * // -> Component
+   * const result = component.replaceWith('<div>Some new content</div>');
+   * // result -> [Component]
    */
-  replaceWith(el: Component) {
+  replaceWith<C extends Component = Component>(el: ComponentAdd, opts: AddOptions = {}): C[] {
     const coll = this.collection;
     const at = coll.indexOf(this);
     coll.remove(this);
-    return coll.add(el, { at });
+    const result = coll.add(el, { ...opts, at });
+    return isArray(result) ? result : [result];
   }
 
   /**
@@ -564,7 +584,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * component.removeAttributes('some-attr');
    * component.removeAttributes(['some-attr1', 'some-attr2']);
    */
-  removeAttributes(attrs: string[] = [], opts: SetOptions = {}) {
+  removeAttributes(attrs: string | string[] = [], opts: SetOptions = {}) {
     const attrArr = Array.isArray(attrs) ? attrs : [attrs];
     const compAttr = this.getAttributes();
     attrArr.map(i => delete compAttr[i]);
@@ -619,6 +639,10 @@ export default class Component extends StyleableModel<ComponentProperties> {
       prop = super.setStyle.apply(this, arguments as any);
     }
 
+    if (!opt.temporary) {
+      this.__onStyleChange(opts.addStyle || prop);
+    }
+
     return prop;
   }
 
@@ -641,7 +665,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
         if (isString(cls)) {
           classes.push(cls);
         } else if (!opts.forHTML || !cls.get('editonly')) {
-          classes.push(cls.get('name'));
+          classes.push(cls.getName());
         }
       });
       classes.length && (attributes.class = classes.join(' '));
@@ -665,8 +689,14 @@ export default class Component extends StyleableModel<ComponentProperties> {
         addId = !!sm?.get(id, sm.Selector.TYPE_ID);
       }
 
-      // Symbols should always have an id
-      if (this.__getSymbol() || this.__getSymbols()) {
+      if (
+        // Symbols should always have an id
+        this.__getSymbol() ||
+        this.__getSymbols() ||
+        // Components with script should always have an id
+        this.get('script-export') ||
+        this.get('script')
+      ) {
         addId = true;
       }
 
@@ -1639,6 +1669,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     delete obj.status;
     delete obj.open; // used in Layers
     delete obj._undoexc;
+    delete obj.delegate;
 
     if (!opts.fromUndo) {
       const symbol = obj[keySymbol];
@@ -2086,10 +2117,10 @@ export default class Component extends StyleableModel<ComponentProperties> {
     components: ComponentDefinitionDefined | ComponentDefinitionDefined[],
     styles: CssRuleJSON[] = [],
     list: ObjectAny = {},
-    opts: { keepIds?: string[] } = {}
+    opts: { keepIds?: string[]; idMap?: PrevToNewIdMap } = {}
   ) {
     const comps = isArray(components) ? components : [components];
-    const { keepIds = [] } = opts;
+    const { keepIds = [], idMap = {} } = opts;
     comps.forEach(comp => {
       comp.attributes;
       const { attributes = {}, components } = comp;
@@ -2098,6 +2129,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
       // Check if we have collisions with current components
       if (id && list[id] && keepIds.indexOf(id) < 0) {
         const newId = Component.getIncrementId(id, list);
+        idMap[id] = newId;
         attributes.id = newId;
         // Update passed styles
         isArray(styles) &&

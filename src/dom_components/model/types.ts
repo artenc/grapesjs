@@ -1,10 +1,12 @@
 import Frame from '../../canvas/model/Frame';
+import { Nullable } from '../../common';
 import EditorModel from '../../editor/model/Editor';
 import Selectors from '../../selector_manager/model/Selectors';
 import { TraitProperties } from '../../trait_manager/model/Trait';
 import Traits from '../../trait_manager/model/Traits';
 import { ResizerOptions } from '../../utils/Resizer';
 import { DomComponentsConfig } from '../config/config';
+import ComponentView from '../view/ComponentView';
 import Component from './Component';
 import Components from './Components';
 import { ToolbarButtonProps } from './ToolbarButton';
@@ -12,6 +14,50 @@ import { ToolbarButtonProps } from './ToolbarButton';
 export type DragMode = 'translate' | 'absolute' | '';
 
 export type DraggableDroppableFn = (source: Component, target: Component, index?: number) => boolean | void;
+
+export interface ComponentStackItem {
+  id: string;
+  model: typeof Component;
+  view: typeof ComponentView;
+}
+
+/**
+ * Delegate commands to other components.
+ */
+export interface ComponentDelegateProps {
+  /**
+   * Delegate remove command to another component.
+   * @example
+   * delegate: {
+   *  remove: (cmp) => cmp.closestType('other-type'),
+   * }
+   */
+  remove?: (cmp: Component) => Component | Nullable;
+  /**
+   * Delegate move command to another component.
+   * @example
+   * delegate: {
+   *  move: (cmp) => cmp.closestType('other-type'),
+   * }
+   */
+  move?: (cmp: Component) => Component | Nullable;
+  /**
+   * Delegate copy command to another component.
+   * @example
+   * delegate: {
+   *  copy: (cmp) => cmp.closestType('other-type'),
+   * }
+   */
+  copy?: (cmp: Component) => Component | Nullable;
+  /**
+   * Delegate select command to another component.
+   * @example
+   * delegate: {
+   *  select: (cmp) => cmp.findType('other-type')[0],
+   * }
+   */
+  select?: (cmp: Component) => Component | Nullable;
+}
 
 export interface ComponentProperties {
   /**
@@ -167,6 +213,12 @@ export interface ComponentProperties {
    * By default, when `toolbar` property is falsy the editor will add automatically commands `core:component-exit` (select parent component, added if there is one), `tlb-move` (added if `draggable`) , `tlb-clone` (added if `copyable`), `tlb-delete` (added if `removable`).
    */
   toolbar?: ToolbarButtonProps[];
+
+  /**
+   * Delegate commands to other components.
+   */
+  delegate?: ComponentDelegateProps;
+
   ///**
   // * Children components. Default: `null`
   // */

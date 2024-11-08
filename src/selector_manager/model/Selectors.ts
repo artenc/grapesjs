@@ -11,32 +11,32 @@ const combine = (tail: string[], curr: string): string[] => {
   );
 };
 
+export interface FullNameOptions {
+  combination?: boolean;
+  array?: boolean;
+}
+
 export default class Selectors extends Collection<Selector> {
   modelId(attr: any) {
     return `${attr.name}_${attr.type || Selector.TYPE_CLASS}`;
   }
 
   getStyleable({ noFixed }: any = {}) {
-    const selectors = filter(
-      this.models,
-      (item) => item.get('active') && !item.get('private')
-    );
-
+    const selectors = filter(this.models, item => item.getActive() && !item.get('private'));
     return !noFixed || this.hasNonFixed(selectors) ? selectors : [];
   }
 
   getValid({ noDisabled, noFixed }: any = {}) {
-    const selectors = filter(this.models, (item) => !item.get('private')).filter((item) =>
+    const selectors = filter(this.models, item => !item.get('private')).filter(item =>
       noDisabled ? item.get('active') : 1
     );
-
     return !noFixed || this.hasNonFixed(selectors) ? selectors : [];
   }
 
   getFullString(collection?: Selector[] | null, opts: { sort?: boolean } = {}) {
     const result: string[] = [];
     const coll = collection || this;
-    coll.forEach((selector) => result.push(selector.getFullName(opts)));
+    coll.forEach(selector => result.push(selector.getFullName(opts)));
     opts.sort && result.sort();
     return result.join('').trim();
   }
@@ -45,10 +45,10 @@ export default class Selectors extends Collection<Selector> {
     return some(collection || this.models, item => !item.get('fixed'));
   }
 
-  getFullName(opts: any = {}) {
+  getFullName<T extends FullNameOptions>(opts: T = {} as T) {
     const { combination, array } = opts;
     let result: string[] = [];
-    const sels = this.map((s) => s.getFullName(opts)).sort();
+    const sels = this.map(s => s.getFullName(opts)).sort();
 
     if (combination) {
       sels.forEach((sel, n) => {
@@ -58,7 +58,9 @@ export default class Selectors extends Collection<Selector> {
       result = sels;
     }
 
-    return array ? result : combination ? result.join(',') : result.join('');
+    return (array ? result : combination ? result.join(',') : result.join('')) as T['array'] extends true
+      ? string[]
+      : string;
   }
 }
 

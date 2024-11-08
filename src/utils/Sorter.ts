@@ -1183,10 +1183,6 @@ export default class Sorter extends View {
 
     if (src) {
       srcModel = this.getSourceModel();
-      if (this.selectOnEnd && srcModel && srcModel.set) {
-        srcModel.set('status', '');
-        srcModel.set('status', 'selected');
-      }
     }
 
     if (this.moved && target) {
