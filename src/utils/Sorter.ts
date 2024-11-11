@@ -695,11 +695,12 @@ export default class Sorter extends View {
    * @return {Boolean}
    */
   validTarget(trg: HTMLElement, src?: HTMLElement) {
+    const pos = this.lastPos;
     const trgModel = this.getTargetModel(trg);
     const srcModel = this.getSourceModel(src, { target: trgModel });
     // @ts-ignore
-    src = srcModel && srcModel.view && srcModel.view.el;
-    trg = trgModel && trgModel.view && trgModel.view.el;
+    src = srcModel?.view?.el;
+    trg = trgModel?.view?.el;
     let result = {
       valid: true,
       src,
@@ -717,10 +718,12 @@ export default class Sorter extends View {
       return result;
     }
 
+    const index = pos ? (pos.method === 'after' ? pos.indexEl + 1 : pos.indexEl) : trgModel.components().length;
+
     // Check if the source is draggable in target
     let draggable = srcModel.get('draggable');
     if (isFunction(draggable)) {
-      const res = draggable(srcModel, trgModel, {
+      const res = draggable(srcModel, trgModel, index, {
         isTextable: this.isTextableActive(srcModel, trgModel),
       });
       result.dragInfo = res;
@@ -736,7 +739,7 @@ export default class Sorter extends View {
     // Check if the target could accept the source
     let droppable = trgModel.get('droppable');
     if (isFunction(droppable)) {
-      const res = droppable(srcModel, trgModel);
+      const res = droppable(srcModel, trgModel, index);
       result.droppable = res;
       result.dropInfo = res;
       droppable = res;
