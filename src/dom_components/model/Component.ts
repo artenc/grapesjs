@@ -331,7 +331,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
 
   __postRemove() {
     const { em } = this;
-    const um = em?.get('UndoManager');
+    const um = em?.UndoManager;
     if (um) {
       um.remove(this.components());
       um.remove(this.getSelectors());
@@ -1236,8 +1236,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
   /**
    * Override original clone method
    * @private
-   */
-  /** @ts-ignore */
+   * @ts-ignore */
   clone(opt: { symbol?: boolean; symbolInv?: boolean } = {}): this {
     const em = this.em;
     const attr = { ...this.attributes };
@@ -1352,6 +1351,14 @@ export default class Component extends StyleableModel<ComponentProperties> {
       i18nDefName || // Use local component `type` key (eg. `domComponents.names.image`)
       capitalize(defName) // Use component `type` key
     );
+  }
+
+  /**
+   * Update component name.
+   * @param {String} name New name.
+   */
+  setName(name?: string, opts: SetOptions = {}) {
+    this.set('custom-name', name, opts);
   }
 
   /**
@@ -1770,7 +1777,10 @@ export default class Component extends StyleableModel<ComponentProperties> {
 
     if (!cmp) return false;
 
-    return this instanceof cmp;
+    // A tiny hack to make isInstanceOf work properly where there a multiple inheritance
+    const { typeExtends } = this.constructor as typeof Component;
+
+    return this instanceof cmp || typeExtends.has(type);
   }
 
   /**
@@ -1859,6 +1869,8 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const selector = this._getStyleSelector({ id: idPrev });
     selector && selector.set({ name: id, label: id });
   }
+
+  static typeExtends = new Set<string>();
 
   static getDefaults() {
     return result(this.prototype, 'defaults');
